@@ -17,6 +17,8 @@ import '../../features/admin/screens/admin_dashboard.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/ai_assistant/screens/ai_assistant_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
+import '../../features/prescriptions/screens/prescriptions_screen.dart';
+import '../../features/prescriptions/screens/add_prescription_screen.dart';
 import '../../shared/utils/auth_helper.dart';
 
 class AppRouter {
@@ -100,15 +102,21 @@ class AppRouter {
             ),
           ),
           GoRoute(
+            path: '/prescriptions',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: PrescriptionsScreen(),
+            ),
+          ),
+          GoRoute(
             path: '/symptom-analyzer',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: SmartSymptomScreen(),
             ),
           ),
           GoRoute(
-            path: '/reports',
+            path: '/profile',
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: ReportsScreen(),
+              child: ProfileScreen(),
             ),
           ),
         ],
@@ -155,6 +163,16 @@ class AppRouter {
         builder: (context, state) => const AiAssistantScreen(),
       ),
       GoRoute(
+        path: '/reports',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ReportsScreen(),
+      ),
+      GoRoute(
+        path: '/prescriptions/add',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AddPrescriptionScreen(),
+      ),
+      GoRoute(
         path: '/profile',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ProfileScreen(),
@@ -178,8 +196,9 @@ class _AppShellState extends State<_AppShell> {
     '/dashboard',
     '/vitals',
     '/medicines',
+    '/prescriptions',
     '/symptom-analyzer',
-    '/reports',
+    '/profile',
   ];
 
   void _onTabTapped(int index) {
@@ -220,14 +239,19 @@ class _AppShellState extends State<_AppShell> {
             label: 'Medicines',
           ),
           NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long_rounded),
+            label: 'Prescriptions',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.sick_outlined),
             selectedIcon: Icon(Icons.sick_rounded),
             label: 'Symptoms',
           ),
           NavigationDestination(
-            icon: Icon(Icons.assessment_outlined),
-            selectedIcon: Icon(Icons.assessment_rounded),
-            label: 'Reports',
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
           ),
         ],
       ),

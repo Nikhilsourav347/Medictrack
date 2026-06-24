@@ -570,7 +570,7 @@ class _SmartSymptomScreenState extends State<SmartSymptomScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                   const Text(
                     "ASSESSMENT",
                     style: TextStyle(
                       fontSize: 12,
@@ -580,12 +580,21 @@ class _SmartSymptomScreenState extends State<SmartSymptomScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    result.assessment,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      height: 1.45,
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade100),
+                    ),
+                    child: SelectableText(
+                      result.assessment,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        height: 1.45,
+                      ),
                     ),
                   ),
                   const Divider(height: 24),
@@ -600,12 +609,21 @@ class _SmartSymptomScreenState extends State<SmartSymptomScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    result.advice,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      height: 1.45,
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade100),
+                    ),
+                    child: SelectableText(
+                      result.advice,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        height: 1.45,
+                      ),
                     ),
                   ),
                   

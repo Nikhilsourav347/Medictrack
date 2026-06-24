@@ -11,6 +11,8 @@ import '../../../shared/utils/date_utils.dart';
 import '../services/speech_service.dart';
 import '../services/tts_service.dart';
 import '../services/voice_parser.dart';
+import '../../symptoms/services/gemini_symptom_service.dart';
+import '../../../data/repositories/user_profile_repository.dart';
 
 class ChatMessage {
   final String text;
@@ -685,34 +687,94 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     _startListeningForCurrentStep();
   }
 
-  Future<void> _saveSymptom() async {
-    final desc = _symptomDescription ?? "Unspecified symptom";
-    final limitName = desc.substring(0, desc.length > 60 ? 60 : desc.length);
-
-    final symptom = SymptomModel(
-      symptomName: limitName,
-      severity: _symptomSeverity ?? 5,
-      notes: desc,
-      recordedAt: AppDateUtils.nowString(),
-    );
-
-    await SymptomRepository().insertSymptom(symptom);
-
-    final summaryCard = _buildSymptomSummaryCard();
-    _addCustomWidget(summaryCard);
-
-    setState(() {
-      _currentFlow = AssistantFlow.none;
-      _currentStepListener = null;
-      _currentStatus = "Symptom Saved";
-      _showConfirmationBanner = true;
-      _confirmationMessage = "Your symptom has been noted and saved.";
-    });
-
-    await _ttsService.speak("Your symptom has been noted and saved.");
+  int _mapSeverityToScore(String severity) {
+    final clean = severity.trim().toUpperCase();
+    if (clean.contains("EMERGENCY")) return 10;
+    if (clean.contains("SERIOUS")) return 8;
+    if (clean.contains("MODERATE")) return 5;
+    return 2;
   }
 
-  Widget _buildSymptomSummaryCard() {
+  Future<void> _saveSymptom() async {
+    final severityStr = _symptomSeverity != null ? " (Reported Severity: $_symptomSeverity/10)" : "";
+    final desc = "${_symptomDescription ?? "Unspecified symptom"}$severityStr";
+    
+    setState(() {
+      _currentStatus = "Analyzing symptom with AI...";
+    });
+    
+    _addMessage("Analyzing your symptoms with Gemini AI...", isUser: false);
+
+    try {
+      final profile = await UserProfileRepository().getProfile();
+      final recentVitals = await VitalRepository().getRecentVitals(5);
+      final activeMedicines = await MedicineRepository().getActiveMedicines();
+      final patientContext = GeminiSymptomService.buildPatientContext(
+        profile,
+        recentVitals,
+        activeMedicines,
+      );
+
+      final result = await GeminiSymptomService().analyzeSymptom(
+        textDescription: desc,
+        patientContext: patientContext,
+      );
+      
+      final name = desc.substring(0, desc.length > 60 ? 60 : desc.length);
+      final score = _mapSeverityToScore(result.severity);
+      final rawNotes = "ASSESSMENT: ${result.assessment}\n\nSEVERITY: ${result.severity}\n\nADVICE: ${result.advice}\n\nMEDICINES: ${result.medicines}\n\nWATCH_FOR: ${result.watchFor}\n\nVOICE_SUMMARY: ${result.voiceSummary}";
+
+      final symptom = SymptomModel(
+        symptomName: name,
+        severity: score,
+        notes: rawNotes,
+        recordedAt: AppDateUtils.nowString(),
+      );
+
+      await SymptomRepository().insertSymptom(symptom);
+
+      final aiCard = _buildAiAnalysisCard(result);
+      _addCustomWidget(aiCard);
+
+      setState(() {
+        _currentFlow = AssistantFlow.none;
+        _currentStepListener = null;
+        _currentStatus = "Analysis Complete";
+        _showConfirmationBanner = true;
+        _confirmationMessage = "AI analysis complete and saved to your history.";
+      });
+
+      final isEmergency = result.severity.trim().toUpperCase().contains('EMERGENCY');
+      if (isEmergency) {
+        await _ttsService.speak(
+          "Warning. This looks serious. Please seek emergency medical care immediately.",
+          rate: 0.4,
+        );
+      } else {
+        await _ttsService.speak(
+          result.voiceSummary,
+          rate: 0.5,
+        );
+      }
+    } catch (e) {
+      _addMessage("AI analysis failed: $e", isUser: false);
+      setState(() {
+        _currentFlow = AssistantFlow.none;
+        _currentStepListener = null;
+        _currentStatus = "Analysis Failed";
+      });
+      await _ttsService.speak("Sorry, I encountered an error while analyzing your symptoms.");
+    }
+  }
+
+  Widget _buildAiAnalysisCard(SymptomAnalysis result) {
+    final isEmergency = result.severity.trim().toUpperCase().contains('EMERGENCY');
+    final severityColor = isEmergency 
+        ? const Color(0xFFF43F5E) 
+        : result.severity.trim().toUpperCase().contains('SERIOUS')
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFF1D9E75);
+
     return Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -721,55 +783,87 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.sick_rounded, color: Colors.orangeAccent, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  "Symptom Logged",
+                const Icon(Icons.psychology_rounded, color: Color(0xFF6366F1), size: 24),
+                const SizedBox(width: 8),
+                const Text(
+                  "AI Symptom Analysis",
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: severityColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: severityColor, width: 1),
+                  ),
+                  child: Text(
+                    result.severity.toUpperCase(),
+                    style: TextStyle(
+                      color: severityColor,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
             const Divider(height: 20),
-            _summaryRow("Symptom", _symptomDescription ?? "Unspecified"),
-            _summaryRow("Severity Scale", "${_symptomSeverity ?? 5} / 10"),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info_outline_rounded, color: Colors.blue.shade700, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        "Health Advice Notice",
-                        style: TextStyle(color: Colors.blue.shade800, fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    "For detailed image analysis and health advice, go to the Symptom Analyzer on the home screen.",
-                    style: TextStyle(color: Colors.blue.shade900, fontSize: 12, height: 1.3),
-                  ),
-                ],
-              ),
+            const Text(
+              "ASSESSMENT",
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF6366F1), letterSpacing: 0.5),
             ),
+            const SizedBox(height: 4),
+            Text(
+              result.assessment,
+              style: const TextStyle(fontSize: 13, height: 1.35),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "ADVICE",
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF6366F1), letterSpacing: 0.5),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              result.advice,
+              style: const TextStyle(fontSize: 13, height: 1.35),
+            ),
+            if (result.medicines.isNotEmpty && result.medicines != 'None recommended.') ...[
+              const SizedBox(height: 12),
+              const Text(
+                "MEDICINES",
+                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF6366F1), letterSpacing: 0.5),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                result.medicines,
+                style: const TextStyle(fontSize: 13, height: 1.35),
+              ),
+            ],
+            if (result.watchFor.isNotEmpty && result.watchFor != 'None specified.') ...[
+              const SizedBox(height: 12),
+              const Text(
+                "WARNING SIGNS TO WATCH FOR",
+                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFF43F5E), letterSpacing: 0.5),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                result.watchFor,
+                style: const TextStyle(fontSize: 13, height: 1.35, color: Color(0xFF991B1B)),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+
+
 
   Widget _summaryRow(String label, String value) {
     return Padding(

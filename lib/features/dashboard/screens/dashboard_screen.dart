@@ -327,60 +327,92 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildQuickActions(BuildContext context) {
     final actions = [
       _QuickAction(
-          label: 'Log\nVital',
+          label: 'Log Vitals',
           icon: Icons.favorite_rounded,
           color: const Color(0xFF1D9E75),
           onTap: () => context.push('/vitals/add')),
       _QuickAction(
-          label: 'Log\nSymptom',
+          label: 'Log Symptom',
           icon: Icons.sick_rounded,
           color: const Color(0xFFFFC107),
           onTap: () => context.push('/symptoms/add')),
       _QuickAction(
-          label: 'Add\nVisit',
-          icon: Icons.local_hospital_outlined,
+          label: 'Add Medicine',
+          icon: Icons.medication_rounded,
+          color: const Color(0xFF6366F1),
+          onTap: () => context.push('/medicines/add')),
+      _QuickAction(
+          label: 'Prescriptions',
+          icon: Icons.receipt_long_rounded,
           color: const Color(0xFF5C6BC0),
+          onTap: () => context.push('/prescriptions/add')),
+      _QuickAction(
+          label: 'Doctor Visits',
+          icon: Icons.local_hospital_outlined,
+          color: const Color(0xFFAB47BC),
           onTap: () => context.push('/visits/add')),
       _QuickAction(
-          label: 'Reports',
+          label: 'Health Reports',
           icon: Icons.assessment_rounded,
           color: const Color(0xFF26C6DA),
-          onTap: () => context.go('/reports')),
+          onTap: () => context.push('/reports')),
     ];
-    return Row(
-      children: actions
-          .map((a) => Expanded(
-                child: GestureDetector(
-                  onTap: a.onTap,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: a.color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                          color: a.color.withValues(alpha: 0.2), width: 0.5),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(a.icon, color: a.color, size: 26),
-                        const SizedBox(height: 6),
-                        Text(
-                          a.label,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: a.color,
-                              height: 1.3),
-                        ),
-                      ],
-                    ),
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 0.95,
+      ),
+      itemCount: actions.length,
+      itemBuilder: (context, index) {
+        final a = actions[index];
+        return GestureDetector(
+          onTap: a.onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade100, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                )
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: a.color.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(a.icon, color: a.color, size: 24),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  a.label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                    height: 1.2,
                   ),
                 ),
-              ))
-          .toList(),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

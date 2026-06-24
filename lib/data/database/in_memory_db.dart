@@ -3,6 +3,7 @@ import '../../data/models/vital_model.dart';
 import '../../data/models/medicine_model.dart';
 import '../../data/models/symptom_model.dart';
 import '../../data/models/doctor_visit_model.dart';
+import '../../data/models/prescription_model.dart';
 
 class InMemoryDb {
   static final List<UserProfileModel> profiles = [
@@ -253,4 +254,6 @@ class InMemoryDb {
       syncStatus: 1,
     ),
   ];
+
+  static final List<PrescriptionModel> prescriptions = [];
 }

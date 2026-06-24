@@ -19,7 +19,7 @@ class DatabaseHelper {
     final path = join(dbPath, 'meditrack.db');
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -107,6 +107,21 @@ class DatabaseHelper {
         lastUpdated TEXT
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE prescriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        doctorName TEXT,
+        date TEXT NOT NULL,
+        imagePath TEXT NOT NULL,
+        notes TEXT,
+        createdAt TEXT NOT NULL,
+        userId TEXT,
+        syncStatus INTEGER DEFAULT 0,
+        lastUpdated TEXT
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -116,7 +131,24 @@ class DatabaseHelper {
       await db.execute('DROP TABLE IF EXISTS medicines');
       await db.execute('DROP TABLE IF EXISTS symptoms');
       await db.execute('DROP TABLE IF EXISTS doctor_visits');
+      await db.execute('DROP TABLE IF EXISTS prescriptions');
       await _onCreate(db, newVersion);
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS prescriptions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          doctorName TEXT,
+          date TEXT NOT NULL,
+          imagePath TEXT NOT NULL,
+          notes TEXT,
+          createdAt TEXT NOT NULL,
+          userId TEXT,
+          syncStatus INTEGER DEFAULT 0,
+          lastUpdated TEXT
+        )
+      ''');
     }
   }
 
