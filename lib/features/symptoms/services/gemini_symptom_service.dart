@@ -43,7 +43,13 @@ class GeminiSymptomService {
     Uint8List? imageBytes,
     required String patientContext,
   }) async {
-    final String apiKey = dotenv.env['GEMINI_API_KEY'] ?? const String.fromEnvironment('GEMINI_API_KEY');
+    String? apiKey;
+    try {
+      apiKey = dotenv.env['GEMINI_API_KEY'];
+    } catch (_) {
+      // dotenv is not initialized
+    }
+    apiKey ??= const String.fromEnvironment('GEMINI_API_KEY');
     
     if (apiKey.trim().isEmpty || apiKey == 'YOUR_GEMINI_API_KEY_HERE') {
       throw Exception(
