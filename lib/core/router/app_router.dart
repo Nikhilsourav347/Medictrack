@@ -16,6 +16,7 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/admin/screens/admin_dashboard.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/ai_assistant/screens/ai_assistant_screen.dart';
+import '../../features/profile/screens/profile_screen.dart';
 import '../../shared/utils/auth_helper.dart';
 
 class AppRouter {
@@ -152,6 +153,11 @@ class AppRouter {
         path: '/ai-assistant',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const AiAssistantScreen(),
+      ),
+      GoRoute(
+        path: '/profile',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ProfileScreen(),
       ),
     ],
   );
