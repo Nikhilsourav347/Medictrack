@@ -18,29 +18,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: "Track Vitals Instantly",
       description: "Log blood pressure, glucose, oxygen, and heart rate with smart color-coded warning indicators.",
       icon: Icons.monitor_heart_rounded,
-      color: Color(0xFF6366F1), // Indigo
-      accentColor: Color(0xFF818CF8),
+      color: const Color(0xFF6366F1), // Indigo
+      accentColor: const Color(0xFF818CF8),
     ),
     OnboardingSlideData(
       title: "Pill Reminder & Stock Alerts",
       description: "Set personalized medication schedules and receive auto warnings when your medicine stock is running low.",
       icon: Icons.medication_rounded,
-      color: Color(0xFF1D9E75), // Teal
-      accentColor: Color(0xFF34D399),
+      color: const Color(0xFF1D9E75), // Teal
+      accentColor: const Color(0xFF34D399),
     ),
     OnboardingSlideData(
       title: "Instant SOS & Emergency Contact",
       description: "Trigger emergency distress signals with one tap to send automated WhatsApp, SMS alerts, and call your close ones.",
       icon: Icons.sos_rounded,
-      color: Color(0xFFF43F5E), // Rose
-      accentColor: Color(0xFFFB7185),
+      color: const Color(0xFFF43F5E), // Rose
+      accentColor: const Color(0xFFFB7185),
     ),
     OnboardingSlideData(
       title: "Auto Sync & Health Reports",
       description: "Securely backup your logs to the database cloud and export beautiful PDF medical summaries for your next doctor visit.",
       icon: Icons.cloud_done_rounded,
-      color: Color(0xFF6366F1), // Indigo
-      accentColor: Color(0xFF818CF8),
+      color: const Color(0xFF6366F1), // Indigo
+      accentColor: const Color(0xFF818CF8),
     ),
   ];
 
@@ -131,10 +131,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 width: 140,
                                 height: 140,
                                 decoration: BoxDecoration(
-                                  color: slide.color.withOpacity(0.08),
+                                  color: slide.color.withValues(alpha: 0.08),
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: slide.color.withOpacity(0.15),
+                                    color: slide.color.withValues(alpha: 0.15),
                                     width: 2,
                                   ),
                                 ),
@@ -209,7 +209,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             elevation: 4,
-                            shadowColor: _slides[_currentPage].color.withOpacity(0.3),
+                            shadowColor: _slides[_currentPage].color.withValues(alpha: 0.3),
                           ),
                           child: Text(
                             _currentPage == _slides.length - 1 ? 'GET STARTED' : 'NEXT',

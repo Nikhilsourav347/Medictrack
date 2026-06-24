@@ -6,6 +6,7 @@ import '../../features/vitals/screens/add_vital_screen.dart';
 import '../../features/medicines/screens/medicines_screen.dart';
 import '../../features/medicines/screens/add_medicine_screen.dart';
 import '../../features/symptoms/screens/symptoms_screen.dart';
+import '../../features/symptoms/screens/smart_symptom_screen.dart';
 import '../../features/symptoms/screens/add_symptom_screen.dart';
 import '../../features/doctor_visits/screens/doctor_visits_screen.dart';
 import '../../features/doctor_visits/screens/add_visit_screen.dart';
@@ -14,6 +15,7 @@ import '../../features/emergency/screens/emergency_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/admin/screens/admin_dashboard.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
+import '../../features/ai_assistant/screens/ai_assistant_screen.dart';
 import '../../shared/utils/auth_helper.dart';
 
 class AppRouter {
@@ -37,7 +39,9 @@ class AppRouter {
       }
 
       if (isOnboarding) {
-        return isLoggedIn ? (isAdmin ? '/admin/dashboard' : '/dashboard') : '/login';
+        return isLoggedIn
+            ? (isAdmin ? '/admin/dashboard' : '/dashboard')
+            : '/login';
       }
 
       if (!isLoggedIn) {
@@ -71,7 +75,6 @@ class AppRouter {
         builder: (context, state) => const LoginScreen(),
       ),
       ShellRoute(
-
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) {
           return _AppShell(child: child);
@@ -96,9 +99,9 @@ class AppRouter {
             ),
           ),
           GoRoute(
-            path: '/symptoms',
+            path: '/symptom-analyzer',
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: SymptomsScreen(),
+              child: SmartSymptomScreen(),
             ),
           ),
           GoRoute(
@@ -126,6 +129,11 @@ class AppRouter {
         builder: (context, state) => const AddSymptomScreen(),
       ),
       GoRoute(
+        path: '/symptoms/history',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SymptomsScreen(),
+      ),
+      GoRoute(
         path: '/visits',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const DoctorVisitsScreen(),
@@ -139,6 +147,11 @@ class AppRouter {
         path: '/emergency',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const EmergencyScreen(),
+      ),
+      GoRoute(
+        path: '/ai-assistant',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AiAssistantScreen(),
       ),
     ],
   );
@@ -159,7 +172,7 @@ class _AppShellState extends State<_AppShell> {
     '/dashboard',
     '/vitals',
     '/medicines',
-    '/symptoms',
+    '/symptom-analyzer',
     '/reports',
   ];
 
@@ -183,7 +196,7 @@ class _AppShellState extends State<_AppShell> {
         selectedIndex: _currentIndex,
         onDestinationSelected: _onTabTapped,
         backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFF1D9E75).withOpacity(0.12),
+        indicatorColor: const Color(0xFF1D9E75).withValues(alpha: 0.12),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),

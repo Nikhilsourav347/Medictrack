@@ -69,10 +69,10 @@ class DateRangePickerWidget extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1D9E75).withOpacity(0.06),
+                  color: const Color(0xFF1D9E75).withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                      color: const Color(0xFF1D9E75).withOpacity(0.2)),
+                      color: const Color(0xFF1D9E75).withValues(alpha: 0.2)),
                 ),
                 child: Row(children: [
                   const Icon(Icons.calendar_month_outlined,

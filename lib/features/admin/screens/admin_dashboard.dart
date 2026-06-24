@@ -94,6 +94,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
       }
     }
     
+    if (!mounted) return;
     final isMobile = MediaQuery.of(context).size.width <= 750;
     setState(() {
       _elders = list;
@@ -189,7 +190,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
+              color: statusColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: statusColor,
@@ -569,14 +570,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                       color: isSelected ? const Color(0xFFF1F5F9) : Colors.transparent,
                                       borderRadius: BorderRadius.circular(16),
                                       border: isSelected
-                                          ? Border.all(color: const Color(0xFF1D9E75).withOpacity(0.3), width: 1.5)
+                                          ? Border.all(color: const Color(0xFF1D9E75).withValues(alpha: 0.3), width: 1.5)
                                           : Border.all(color: Colors.transparent, width: 1.5),
                                     ),
                                     child: Row(
                                       children: [
                                         CircleAvatar(
                                           radius: 20,
-                                          backgroundColor: isSelected ? const Color(0xFF1D9E75) : const Color(0xFF64748B).withOpacity(0.1),
+                                          backgroundColor: isSelected ? const Color(0xFF1D9E75) : const Color(0xFF64748B).withValues(alpha: 0.1),
                                           child: Text(
                                             elder.name.substring(0, 2).toUpperCase(),
                                             style: TextStyle(
@@ -689,7 +690,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: alertColor.withOpacity(0.12),
+                color: alertColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: alertColor, width: 1),
               ),
@@ -721,7 +722,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.02),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -864,12 +865,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isAlert ? const Color(0xFFF43F5E).withOpacity(0.5) : const Color(0xFFE2E8F0),
+          color: isAlert ? const Color(0xFFF43F5E).withValues(alpha: 0.5) : const Color(0xFFE2E8F0),
           width: isAlert ? 1.5 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: isAlert ? const Color(0xFFF43F5E).withOpacity(0.06) : color.withOpacity(0.04),
+            color: isAlert ? const Color(0xFFF43F5E).withValues(alpha: 0.06) : color.withValues(alpha: 0.04),
             blurRadius: 12,
             spreadRadius: isAlert ? 1 : 0,
             offset: const Offset(0, 5),
@@ -934,7 +935,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           border: Border.all(color: const Color(0xFFE2E8F0)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF0F172A).withOpacity(0.03),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
               blurRadius: 16,
               offset: const Offset(0, 8),
             ),
@@ -966,7 +967,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.03),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -1065,7 +1066,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     dotData: const FlDotData(show: true),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: const Color(0xFFF43F5E).withOpacity(0.08),
+                      color: const Color(0xFFF43F5E).withValues(alpha: 0.08),
                     ),
                   ),
                   LineChartBarData(
@@ -1077,7 +1078,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     dotData: const FlDotData(show: true),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: const Color(0xFF6366F1).withOpacity(0.08),
+                      color: const Color(0xFF6366F1).withValues(alpha: 0.08),
                     ),
                   ),
                 ],
@@ -1115,7 +1116,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.03),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -1151,7 +1152,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       children: [
                         CircleAvatar(
                           radius: 18,
-                          backgroundColor: const Color(0xFF6366F1).withOpacity(0.1),
+                          backgroundColor: const Color(0xFF6366F1).withValues(alpha: 0.1),
                           child: const Icon(Icons.medication_rounded, color: Color(0xFF6366F1), size: 16),
                         ),
                         const SizedBox(width: 12),
@@ -1173,7 +1174,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: med.isActive ? const Color(0xFF10B981).withOpacity(0.1) : const Color(0xFF64748B).withOpacity(0.1),
+                            color: med.isActive ? const Color(0xFF10B981).withValues(alpha: 0.1) : const Color(0xFF64748B).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -1206,7 +1207,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             border: Border.all(color: const Color(0xFFE2E8F0)),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0F172A).withOpacity(0.03),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
                 blurRadius: 16,
                 offset: const Offset(0, 8),
               ),
@@ -1253,7 +1254,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: sym.severity > 5 ? const Color(0xFFF43F5E).withOpacity(0.1) : const Color(0xFFF59E0B).withOpacity(0.1),
+                                  color: sym.severity > 5 ? const Color(0xFFF43F5E).withValues(alpha: 0.1) : const Color(0xFFF59E0B).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -1284,7 +1285,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             border: Border.all(color: const Color(0xFFE2E8F0)),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0F172A).withOpacity(0.03),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
                 blurRadius: 16,
                 offset: const Offset(0, 8),
               ),

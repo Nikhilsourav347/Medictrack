@@ -74,7 +74,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: CustomAppBar(title: 'Record Vitals', showBack: true),
+      appBar: const CustomAppBar(title: 'Record Vitals', showBack: true),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(

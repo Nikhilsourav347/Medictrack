@@ -68,14 +68,14 @@ class _PulsePainter extends CustomPainter {
 
     // Draw background concentric ring 1
     final paint1 = Paint()
-      ..color = color.withOpacity((1.0 - animationValue).clamp(0.0, 1.0))
+      ..color = color.withValues(alpha: (1.0 - animationValue).clamp(0.0, 1.0))
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, maxRadius * animationValue, paint1);
 
     // Draw background concentric ring 2
     final value2 = (animationValue + 0.5) % 1.0;
     final paint2 = Paint()
-      ..color = color.withOpacity((1.0 - value2).clamp(0.0, 1.0))
+      ..color = color.withValues(alpha: (1.0 - value2).clamp(0.0, 1.0))
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, maxRadius * value2, paint2);
 

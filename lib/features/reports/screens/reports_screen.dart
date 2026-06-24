@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/src/widgets/table_helper.dart' as pw_table;
 import 'package:printing/printing.dart';
 import '../../../data/models/vital_model.dart';
 import '../../../data/models/symptom_model.dart';
@@ -154,7 +153,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             if (_vitals.isNotEmpty) ...[
               _pdfSectionHeader('Vital Signs'),
               pw.SizedBox(height: 8),
-              pw_table.TableHelper.fromTextArray(
+              pw.TableHelper.fromTextArray(
                 headers: ['Date', 'BP (mmHg)', 'HR (bpm)', 'SpO₂ (%)', 'Temp (°C)', 'Glucose'],
                 data: _vitals.map((v) => [
                   AppDateUtils.formatDisplay(v.recordedAt),
@@ -182,7 +181,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             if (_symptoms.isNotEmpty) ...[
               _pdfSectionHeader('Symptoms'),
               pw.SizedBox(height: 8),
-              pw_table.TableHelper.fromTextArray(
+              pw.TableHelper.fromTextArray(
                 headers: ['Date', 'Symptom', 'Severity', 'Notes'],
                 data: _symptoms.map((s) => [
                   AppDateUtils.formatDisplay(s.recordedAt),
@@ -461,12 +460,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: const Color(0xFF1D9E75).withOpacity(0.08),
+              color: const Color(0xFF1D9E75).withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.assessment_outlined,
                 size: 36,
-                color: const Color(0xFF1D9E75).withOpacity(0.5)),
+                color: const Color(0xFF1D9E75).withValues(alpha: 0.5)),
           ),
           const SizedBox(height: 16),
           const Text('No data for this period',
@@ -490,9 +489,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Row(children: [
           Icon(icon, size: 18, color: color),
@@ -576,7 +575,7 @@ class _SymptomSummaryRow extends StatelessWidget {
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
+          color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(

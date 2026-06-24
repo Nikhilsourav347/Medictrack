@@ -49,5 +49,13 @@
 		<false/>
 		<key>NSContactsUsageDescription</key>
 		<string>This app requires contacts access to allow you to select emergency contacts.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>This app requires microphone access to record voice descriptions of symptoms.</string>
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>This app requires speech recognition access to convert voice symptoms to text.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>This app requires camera access to capture photos of physical symptoms for AI analysis.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>This app requires photo library access to choose photos of physical symptoms for AI analysis.</string>
 	</dict>
 </plist>

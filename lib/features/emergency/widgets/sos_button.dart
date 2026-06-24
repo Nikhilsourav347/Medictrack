@@ -85,7 +85,7 @@ class _SosButtonState extends State<SosButton>
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: const Color(0xFFE53935)
-                                  .withOpacity(0.3 - (i * 0.1)),
+                                  .withValues(alpha: 0.3 - (i * 0.1)),
                               width: 2,
                             ),
                           ),
@@ -100,7 +100,7 @@ class _SosButtonState extends State<SosButton>
                     child: CircularProgressIndicator(
                       value: progress,
                       strokeWidth: 6,
-                      backgroundColor: const Color(0xFFE53935).withOpacity(0.15),
+                      backgroundColor: const Color(0xFFE53935).withValues(alpha: 0.15),
                       valueColor: const AlwaysStoppedAnimation<Color>(
                           Color(0xFFE53935)),
                     ),
@@ -128,7 +128,7 @@ class _SosButtonState extends State<SosButton>
                       boxShadow: [
                         BoxShadow(
                           color: const Color(0xFFE53935)
-                              .withOpacity(_holding ? 0.6 : 0.4),
+                              .withValues(alpha: _holding ? 0.6 : 0.4),
                           blurRadius: _holding ? 30 : 20,
                           spreadRadius: _holding ? 8 : 4,
                         ),

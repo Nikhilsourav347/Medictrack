@@ -148,8 +148,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFF818CF8).withOpacity(0.35),
-                    const Color(0xFF6366F1).withOpacity(0.0),
+                    const Color(0xFF818CF8).withValues(alpha: 0.35),
+                    const Color(0xFF6366F1).withValues(alpha: 0.0),
                   ],
                 ),
               ),
@@ -165,8 +165,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFFF43F5E).withOpacity(0.25),
-                    const Color(0xFFF43F5E).withOpacity(0.0),
+                    const Color(0xFFF43F5E).withValues(alpha: 0.25),
+                    const Color(0xFFF43F5E).withValues(alpha: 0.0),
                   ],
                 ),
               ),
@@ -258,7 +258,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                               boxShadow: !_isAdminMode
                                                   ? [
                                                       BoxShadow(
-                                                        color: const Color(0xFF6366F1).withOpacity(0.3),
+                                                        color: const Color(0xFF6366F1).withValues(alpha: 0.3),
                                                         blurRadius: 8,
                                                         offset: const Offset(0, 3),
                                                       )
@@ -292,7 +292,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                               boxShadow: _isAdminMode
                                                   ? [
                                                       BoxShadow(
-                                                        color: const Color(0xFF1D9E75).withOpacity(0.3),
+                                                        color: const Color(0xFF1D9E75).withValues(alpha: 0.3),
                                                         blurRadius: 8,
                                                         offset: const Offset(0, 3),
                                                       )

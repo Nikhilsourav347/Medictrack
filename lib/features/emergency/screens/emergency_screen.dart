@@ -294,7 +294,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: CustomAppBar(
+      appBar: const CustomAppBar(
         title: 'Emergency',
         showBack: true,
         backgroundColor: Colors.white,
@@ -345,10 +345,10 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
           colors: [Color(0xFFFFF5F5), Color(0xFFFFEBEE)],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE53935).withOpacity(0.2)),
+        border: Border.all(color: const Color(0xFFE53935).withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFE53935).withOpacity(0.08),
+            color: const Color(0xFFE53935).withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -398,7 +398,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFFE53935).withOpacity(0.1),
+                color: const Color(0xFFE53935).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.contacts_outlined,
@@ -489,7 +489,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFF1D9E75).withOpacity(0.1),
+                color: const Color(0xFF1D9E75).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.monitor_heart_outlined,
@@ -552,7 +552,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFF5C6BC0).withOpacity(0.1),
+                color: const Color(0xFF5C6BC0).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.medication_outlined,
@@ -632,10 +632,10 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
       padding:
           const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF1D9E75).withOpacity(0.07),
+        color: const Color(0xFF1D9E75).withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-            color: const Color(0xFF1D9E75).withOpacity(0.15)),
+            color: const Color(0xFF1D9E75).withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

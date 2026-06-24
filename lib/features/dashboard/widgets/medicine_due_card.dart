@@ -26,7 +26,7 @@ class MedicineDueCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFF1D9E75).withOpacity(0.1),
+              color: const Color(0xFF1D9E75).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(

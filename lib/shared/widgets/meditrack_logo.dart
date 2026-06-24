@@ -13,7 +13,7 @@ class MediTrackLogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(size * 0.24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1D9E75).withOpacity(0.15),
+            color: const Color(0xFF1D9E75).withValues(alpha: 0.15),
             blurRadius: size * 0.2,
             spreadRadius: 1,
             offset: Offset(0, size * 0.05),

@@ -62,7 +62,7 @@ class _AddSymptomScreenState extends State<AddSymptomScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: CustomAppBar(title: 'Log Symptom', showBack: true),
+      appBar: const CustomAppBar(title: 'Log Symptom', showBack: true),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -99,13 +99,13 @@ class _AddSymptomScreenState extends State<AddSymptomScreen> {
                           style: const TextStyle(fontSize: 11)),
                       onPressed: () => setState(() => _nameCtrl.text = s),
                       backgroundColor:
-                          const Color(0xFF1D9E75).withOpacity(0.07),
+                          const Color(0xFF1D9E75).withValues(alpha: 0.07),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 0),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                         side: BorderSide(
-                            color: const Color(0xFF1D9E75).withOpacity(0.2)),
+                            color: const Color(0xFF1D9E75).withValues(alpha: 0.2)),
                       ),
                     );
                   }).toList(),
@@ -128,10 +128,10 @@ class _AddSymptomScreenState extends State<AddSymptomScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: _severityColor.withOpacity(0.12),
+                        color: _severityColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                            color: _severityColor.withOpacity(0.3)),
+                            color: _severityColor.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -163,8 +163,8 @@ class _AddSymptomScreenState extends State<AddSymptomScreen> {
                   data: SliderTheme.of(context).copyWith(
                     activeTrackColor: _severityColor,
                     thumbColor: _severityColor,
-                    inactiveTrackColor: _severityColor.withOpacity(0.2),
-                    overlayColor: _severityColor.withOpacity(0.1),
+                    inactiveTrackColor: _severityColor.withValues(alpha: 0.2),
+                    overlayColor: _severityColor.withValues(alpha: 0.1),
                     trackHeight: 6,
                     thumbShape:
                         const RoundSliderThumbShape(enabledThumbRadius: 10),

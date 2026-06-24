@@ -33,7 +33,7 @@ class _VisitCardState extends State<VisitCard> {
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -57,7 +57,7 @@ class _VisitCardState extends State<VisitCard> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1D9E75).withOpacity(0.1),
+                      color: const Color(0xFF1D9E75).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.local_hospital_rounded,
@@ -137,8 +137,8 @@ class _VisitCardState extends State<VisitCard> {
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: followUpSoon
-                                ? const Color(0xFFFFC107).withOpacity(0.15)
-                                : Colors.blue.withOpacity(0.1),
+                                ? const Color(0xFFFFC107).withValues(alpha: 0.15)
+                                : Colors.blue.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(

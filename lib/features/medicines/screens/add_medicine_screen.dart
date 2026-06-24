@@ -64,7 +64,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: CustomAppBar(title: 'Add Medicine', showBack: true),
+      appBar: const CustomAppBar(title: 'Add Medicine', showBack: true),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -99,7 +99,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                         color: Color(0xFF6B7280))),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: _frequency,
+                  initialValue: _frequency,
                   decoration: const InputDecoration(border: OutlineInputBorder()),
                   items: AppConstants.frequencyOptions
                       .map((f) => DropdownMenuItem(value: f, child: Text(f)))

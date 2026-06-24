@@ -95,7 +95,7 @@ class _AddVisitScreenState extends State<AddVisitScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: CustomAppBar(title: 'Add Doctor Visit', showBack: true),
+      appBar: const CustomAppBar(title: 'Add Doctor Visit', showBack: true),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(

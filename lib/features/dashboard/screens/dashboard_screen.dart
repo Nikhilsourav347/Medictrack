@@ -55,7 +55,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,8 +78,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
                         color: isOnline
-                            ? const Color(0xFF1D9E75).withOpacity(0.1)
-                            : const Color(0xFFF43F5E).withOpacity(0.1),
+                            ? const Color(0xFF1D9E75).withValues(alpha: 0.1)
+                            : const Color(0xFFF43F5E).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isOnline ? const Color(0xFF1D9E75) : const Color(0xFFF43F5E),
@@ -159,6 +158,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/ai-assistant'),
+        backgroundColor: const Color(0xFF1D9E75),
+        child: const Icon(Icons.mic, color: Colors.white),
+      ),
     );
   }
 
@@ -312,10 +316,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      color: a.color.withOpacity(0.1),
+                      color: a.color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                          color: a.color.withOpacity(0.2), width: 0.5),
+                          color: a.color.withValues(alpha: 0.2), width: 0.5),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -401,7 +405,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 unit: 'mmHg',
                 icon: Icons.favorite_rounded,
                 gradient: const [Color(0xFFFFF1F2), Color(0xFFFFE4E6)],
-                textColor: Color(0xFFF43F5E),
+                textColor: const Color(0xFFF43F5E),
                 status: HealthUtils.bloodPressureStatus(v.systolic!, v.diastolic!),
               ),
             if (v.heartRate != null)
@@ -411,7 +415,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 unit: 'bpm',
                 icon: Icons.monitor_heart_rounded,
                 gradient: const [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
-                textColor: Color(0xFFEA580C),
+                textColor: const Color(0xFFEA580C),
                 status: HealthUtils.heartRateStatus(v.heartRate!),
               ),
             if (v.oxygenSaturation != null)
@@ -421,7 +425,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 unit: '%',
                 icon: Icons.water_drop_rounded,
                 gradient: const [Color(0xFFECFEFF), Color(0xFFCFFAFE)],
-                textColor: Color(0xFF0891B2),
+                textColor: const Color(0xFF0891B2),
                 status: HealthUtils.oxygenStatus(v.oxygenSaturation!),
               ),
             if (v.temperature != null)
@@ -431,7 +435,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 unit: '°C',
                 icon: Icons.thermostat_rounded,
                 gradient: const [Color(0xFFFAF5FF), Color(0xFFF3E8FF)],
-                textColor: Color(0xFF9333EA),
+                textColor: const Color(0xFF9333EA),
                 status: HealthUtils.temperatureStatus(v.temperature!),
               ),
           ],
