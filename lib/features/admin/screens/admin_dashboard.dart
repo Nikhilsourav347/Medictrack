@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/models/user_profile_model.dart';
 import '../../../data/models/vital_model.dart';

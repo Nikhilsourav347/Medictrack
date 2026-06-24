@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/models/medicine_model.dart';
@@ -84,6 +86,143 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showEditContactDialog() {
+    final nameController = TextEditingController(text: _profile?.emergencyContactName ?? '');
+    final phoneController = TextEditingController(text: _profile?.emergencyContactPhone ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.contact_phone, color: Color(0xFFE53935)),
+              SizedBox(width: 8),
+              Text('Emergency Contact'),
+            ],
+          ),
+          content: StatefulBuilder(
+            builder: (context, setDialogState) {
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Contact Name',
+                        prefixIcon: const Icon(Icons.person),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: 'Phone Number',
+                        prefixIcon: const Icon(Icons.phone),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        suffixIcon: kIsWeb
+                            ? null
+                            : IconButton(
+                                icon: const Icon(Icons.contacts_outlined, color: Color(0xFFE53935)),
+                                tooltip: 'Select from Phone Contacts',
+                                onPressed: () async {
+                                  final messenger = ScaffoldMessenger.of(context);
+                                  try {
+                                    if (await FlutterContacts.requestPermission()) {
+                                      final contact = await FlutterContacts.openExternalPick();
+                                      if (contact != null) {
+                                        String name = contact.displayName;
+                                        String phone = '';
+                                        if (contact.phones.isNotEmpty) {
+                                          phone = contact.phones.first.number;
+                                        }
+                                        setDialogState(() {
+                                          nameController.text = name;
+                                          phoneController.text = phone;
+                                        });
+                                      }
+                                    } else {
+                                      if (mounted) {
+                                        messenger.showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Contacts permission denied. Please enter details manually.'),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      messenger.showSnackBar(
+                                        SnackBar(content: Text('Failed to pick contact: $e')),
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE53935),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                final name = nameController.text.trim();
+                final phone = phoneController.text.trim();
+                if (name.isEmpty || phone.isEmpty) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(content: Text('Please fill out both name and phone number')),
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext);
+                
+                final baseProfile = _profile ?? UserProfileModel(
+                  name: 'User',
+                  createdAt: DateTime.now().toIso8601String(),
+                );
+                
+                final updated = baseProfile.copyWith(
+                  emergencyContactName: name,
+                  emergencyContactPhone: phone,
+                );
+                
+                await _profileRepo.upsertProfile(updated);
+                await _loadData();
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Emergency contact saved successfully.')),
+                  );
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -269,13 +408,37 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
             const Text('Emergency Contact',
                 style: TextStyle(
                     fontSize: 15, fontWeight: FontWeight.w700)),
+            const Spacer(),
+            if (hasContact || hasPhone)
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFFE53935)),
+                onPressed: _showEditContactDialog,
+                tooltip: 'Edit Emergency Contact',
+              ),
           ]),
           const SizedBox(height: 14),
-          if (!hasContact && !hasPhone)
+          if (!hasContact && !hasPhone) ...[
             const Text(
-              'No emergency contact set up yet.\nGo to Profile → Emergency Contact to add one.',
+              'No emergency contact set up yet.',
               style: TextStyle(color: Color(0xFF6B7280), fontSize: 13, height: 1.5),
-            )
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _showEditContactDialog,
+                icon: const Icon(Icons.add_call, size: 18),
+                label: const Text('Add Contact'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE53935),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ]
           else ...[
             if (hasContact)
               _infoRow(Icons.person_outline, 'Name',
