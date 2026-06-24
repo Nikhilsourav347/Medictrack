@@ -13,6 +13,7 @@ class AuthHelper extends ChangeNotifier {
   static const String _keyUserEmail = 'user_email';
   static const String _keyIsAdmin = 'is_admin';
   static const String _keyOnboardingCompleted = 'onboarding_completed';
+  static const String _keyAcceptedPrecautions = 'accepted_precautions';
 
   final UserProfileRepository _profileRepo = UserProfileRepository();
   SharedPreferences? _prefs;
@@ -21,11 +22,13 @@ class AuthHelper extends ChangeNotifier {
   bool _isLoggedInState = false;
   bool _isAdminState = false;
   bool _onboardingCompletedState = false;
+  bool _acceptedPrecautionsState = false;
   String? _userEmailState;
 
   bool get isLoggedIn => _isLoggedInState;
   bool get isAdmin => _isAdminState;
   bool get onboardingCompleted => _onboardingCompletedState;
+  bool get acceptedPrecautions => _acceptedPrecautionsState;
   String? get userEmail => _userEmailState;
 
   Future<void> init() async {
@@ -34,6 +37,7 @@ class AuthHelper extends ChangeNotifier {
     _isLoggedInState = _prefs?.getBool(_keyIsLoggedIn) ?? false;
     _isAdminState = _prefs?.getBool(_keyIsAdmin) ?? false;
     _onboardingCompletedState = _prefs?.getBool(_keyOnboardingCompleted) ?? false;
+    _acceptedPrecautionsState = _prefs?.getBool(_keyAcceptedPrecautions) ?? false;
     _userEmailState = _prefs?.getString(_keyUserEmail);
     _initialized = true;
     notifyListeners();
@@ -43,6 +47,13 @@ class AuthHelper extends ChangeNotifier {
     await init();
     await _prefs?.setBool(_keyOnboardingCompleted, true);
     _onboardingCompletedState = true;
+    notifyListeners();
+  }
+
+  Future<void> acceptPrecautions() async {
+    await init();
+    await _prefs?.setBool(_keyAcceptedPrecautions, true);
+    _acceptedPrecautionsState = true;
     notifyListeners();
   }
 

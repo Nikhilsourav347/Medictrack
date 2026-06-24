@@ -209,76 +209,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GestureDetector(
-                    onTap: () async {
-                      final updated = await context.push('/profile');
-                      if (updated == true) {
-                        _loadData();
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.person_rounded,
-                            color: Colors.white,
-                            size: 14,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'Profile',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
+              GestureDetector(
+                onTap: () async {
+                  await AuthHelper().logout();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () async {
-                      await AuthHelper().logout();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(10),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.logout_rounded,
+                        color: Colors.white,
+                        size: 14,
                       ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.logout_rounded,
-                            color: Colors.white,
-                            size: 14,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'Logout',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
+                      SizedBox(width: 4),
+                      Text(
+                        'Logout',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    ],
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -325,94 +285,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildQuickActions(BuildContext context) {
-    final actions = [
-      _QuickAction(
-          label: 'Log Vitals',
-          icon: Icons.favorite_rounded,
-          color: const Color(0xFF1D9E75),
-          onTap: () => context.push('/vitals/add')),
-      _QuickAction(
-          label: 'Log Symptom',
-          icon: Icons.sick_rounded,
-          color: const Color(0xFFFFC107),
-          onTap: () => context.push('/symptoms/add')),
-      _QuickAction(
-          label: 'Add Medicine',
-          icon: Icons.medication_rounded,
-          color: const Color(0xFF6366F1),
-          onTap: () => context.push('/medicines/add')),
-      _QuickAction(
-          label: 'Prescriptions',
-          icon: Icons.receipt_long_rounded,
-          color: const Color(0xFF5C6BC0),
-          onTap: () => context.push('/prescriptions/add')),
-      _QuickAction(
-          label: 'Doctor Visits',
-          icon: Icons.local_hospital_outlined,
-          color: const Color(0xFFAB47BC),
-          onTap: () => context.push('/visits/add')),
-      _QuickAction(
-          label: 'Health Reports',
-          icon: Icons.assessment_rounded,
-          color: const Color(0xFF26C6DA),
-          onTap: () => context.push('/reports')),
+    final blocks = [
+      {
+        'label': 'Getting\nStarted',
+        'icon': Icons.menu_book_rounded,
+        'bgColor': const Color(0xFFE8F5E9),
+        'iconColor': const Color(0xFF2E7D32),
+        'onTap': () => context.push('/getting-started'),
+      },
+      {
+        'label': 'AI\nInsights',
+        'icon': Icons.auto_awesome_rounded,
+        'bgColor': const Color(0xFFF3E5F5),
+        'iconColor': const Color(0xFF7B1FA2),
+        'onTap': () => context.push('/ai-insights'),
+      },
+      {
+        'label': 'Log\nVital',
+        'icon': Icons.favorite_rounded,
+        'bgColor': const Color(0xFFE0F2F1),
+        'iconColor': const Color(0xFF00796B),
+        'onTap': () => context.push('/vitals/add'),
+      },
+      {
+        'label': 'Log\nSymptom',
+        'icon': Icons.sick_rounded,
+        'bgColor': const Color(0xFFFFF8E1),
+        'iconColor': const Color(0xFFF57F17),
+        'onTap': () => context.push('/symptoms/add'),
+      },
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 0.95,
-      ),
-      itemCount: actions.length,
-      itemBuilder: (context, index) {
-        final a = actions[index];
-        return GestureDetector(
-          onTap: a.onTap,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade100, width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                )
-              ],
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: a.color.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
+    return Row(
+      children: blocks.map((b) {
+        return Expanded(
+          child: GestureDetector(
+            onTap: b['onTap'] as VoidCallback,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              height: 100,
+              decoration: BoxDecoration(
+                color: b['bgColor'] as Color,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  )
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    b['icon'] as IconData,
+                    color: b['iconColor'] as Color,
+                    size: 26,
                   ),
-                  child: Icon(a.icon, color: a.color, size: 24),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  a.label,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                    height: 1.2,
+                  const SizedBox(height: 8),
+                  Text(
+                    b['label'] as String,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: (b['iconColor'] as Color).withValues(alpha: 0.9),
+                      height: 1.2,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
-      },
+      }).toList(),
     );
   }
 
@@ -550,17 +497,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-class _QuickAction {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-  const _QuickAction(
-      {required this.label,
-      required this.icon,
-      required this.color,
-      required this.onTap});
-}
 
 class _VitalSummaryCard extends StatelessWidget {
   final String label;

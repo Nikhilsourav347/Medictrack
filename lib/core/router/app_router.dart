@@ -15,6 +15,8 @@ import '../../features/emergency/screens/emergency_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/admin/screens/admin_dashboard.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
+import '../../features/onboarding/screens/getting_started_screen.dart';
+import '../../features/ai_insights/screens/ai_insights_screen.dart';
 import '../../features/ai_assistant/screens/ai_assistant_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/prescriptions/screens/prescriptions_screen.dart';
@@ -32,10 +34,12 @@ class AppRouter {
     redirect: (context, state) {
       final auth = AuthHelper();
       final hasCompletedOnboarding = auth.onboardingCompleted;
+      final acceptedPrecautions = auth.acceptedPrecautions;
       final isLoggedIn = auth.isLoggedIn;
       final isAdmin = auth.isAdmin;
       final isLoggingIn = state.matchedLocation == '/login';
       final isOnboarding = state.matchedLocation == '/onboarding';
+      final isGettingStarted = state.matchedLocation == '/getting-started';
 
       if (!hasCompletedOnboarding) {
         return isOnboarding ? null : '/onboarding';
@@ -44,11 +48,15 @@ class AppRouter {
       if (isOnboarding) {
         return isLoggedIn
             ? (isAdmin ? '/admin/dashboard' : '/dashboard')
-            : '/login';
+            : (acceptedPrecautions ? '/login' : '/getting-started');
+      }
+
+      if (!acceptedPrecautions) {
+        return isGettingStarted ? null : '/getting-started';
       }
 
       if (!isLoggedIn) {
-        return '/login';
+        return (isLoggingIn || isGettingStarted) ? null : '/login';
       }
       if (isLoggedIn && isLoggingIn) {
         return isAdmin ? '/admin/dashboard' : '/dashboard';
@@ -66,6 +74,11 @@ class AppRouter {
         path: '/onboarding',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/getting-started',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const GettingStartedScreen(),
       ),
       GoRoute(
         path: '/admin/dashboard',
@@ -163,6 +176,11 @@ class AppRouter {
         builder: (context, state) => const AiAssistantScreen(),
       ),
       GoRoute(
+        path: '/ai-insights',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AiInsightsScreen(),
+      ),
+      GoRoute(
         path: '/reports',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ReportsScreen(),
@@ -171,11 +189,6 @@ class AppRouter {
         path: '/prescriptions/add',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const AddPrescriptionScreen(),
-      ),
-      GoRoute(
-        path: '/profile',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const ProfileScreen(),
       ),
     ],
   );
