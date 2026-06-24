@@ -46,8 +46,11 @@ class SpeechService {
       onResult: (result) {
         onResult(result.recognizedWords, result.finalResult);
       },
-      listenFor: const Duration(seconds: 30),
-      pauseFor: const Duration(seconds: 3), // shorter pause for quicker turn-taking
+      listenOptions: stt.SpeechListenOptions(
+        listenMode: stt.ListenMode.confirmation,
+        listenFor: const Duration(seconds: 30),
+        pauseFor: const Duration(seconds: 3),
+      ),
     );
   }
 
