@@ -23,6 +23,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final VitalRepository _vitalRepo = VitalRepository();
   final MedicineRepository _medRepo = MedicineRepository();
 
+  final GlobalKey _weeklyTrendsKey = GlobalKey();
+
   VitalModel? _latestVital;
   List<MedicineModel> _medicines = [];
   List<VitalModel> _recentVitals = [];
@@ -326,7 +328,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'icon': Icons.bar_chart,
         'color': const Color(0xFF3F51B5),
         'bgColor': const Color(0xFFE8EAF6),
-        'onTap': () => context.go('/vitals'),
+        'onTap': () {
+          final targetContext = _weeklyTrendsKey.currentContext;
+          if (targetContext != null) {
+            Scrollable.ensureVisible(
+              targetContext,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeInOut,
+            );
+          }
+        },
       },
       {
         'label': 'PDF Report',
@@ -602,6 +613,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildWeeklyTrendsSection() {
     return Container(
+      key: _weeklyTrendsKey,
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
