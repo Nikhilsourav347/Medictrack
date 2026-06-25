@@ -116,19 +116,15 @@ class AppRouter {
             ),
           ),
           GoRoute(
-            path: '/symptoms',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: SymptomsScreen(),
-            ),
-          ),
-          GoRoute(
-            path: '/reports',
-            builder: (context, state) => const ReportsScreen(),
-          ),
-          GoRoute(
             path: '/prescriptions',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: PrescriptionsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/symptoms',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: SymptomsScreen(),
             ),
           ),
           GoRoute(
@@ -142,6 +138,10 @@ class AppRouter {
             pageBuilder: (context, state) => const NoTransitionPage(
               child: ProfileScreen(),
             ),
+          ),
+          GoRoute(
+            path: '/reports',
+            builder: (context, state) => const ReportsScreen(),
           ),
         ],
       ),
@@ -215,8 +215,10 @@ class _AppShellState extends State<_AppShell> {
     if (location == '/') return 0;
     if (location.startsWith('/vitals')) return 1;
     if (location.startsWith('/medicines')) return 2;
-    if (location.startsWith('/symptoms')) return 3;
-    if (location.startsWith('/reports')) return 4;
+    if (location.startsWith('/prescriptions')) return 3;
+    if (location.startsWith('/symptoms')) return 4;
+    if (location.startsWith('/symptom-analyzer')) return 4;
+    if (location.startsWith('/profile')) return 5;
     return 0;
   }
 
@@ -233,10 +235,13 @@ class _AppShellState extends State<_AppShell> {
         context.go('/medicines');
         break;
       case 3:
-        context.go('/symptoms');
+        context.go('/prescriptions');
         break;
       case 4:
-        context.go('/reports');
+        context.go('/symptoms');
+        break;
+      case 5:
+        context.go('/profile');
         break;
     }
   }
@@ -270,14 +275,19 @@ class _AppShellState extends State<_AppShell> {
             label: 'Medicines',
           ),
           NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long),
+            label: 'Prescriptions',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.edit_note_outlined),
             selectedIcon: Icon(Icons.edit_note),
             label: 'Symptoms',
           ),
           NavigationDestination(
-            icon: Icon(Icons.description_outlined),
-            selectedIcon: Icon(Icons.description),
-            label: 'Reports',
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
           ),
         ],
       ),

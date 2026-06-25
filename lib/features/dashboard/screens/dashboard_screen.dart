@@ -137,7 +137,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     _buildGreeting(),
                     const SizedBox(height: 20),
-                    _buildQuickActions(context),
+                    _buildGridActions(context),
                     const SizedBox(height: 20),
                     const Text(
                       'Latest Vitals',
@@ -284,82 +284,124 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
-    final blocks = [
+  Widget _buildGridActions(BuildContext context) {
+    final actions = [
       {
-        'label': 'Getting\nStarted',
-        'icon': Icons.menu_book_rounded,
-        'bgColor': const Color(0xFFE8F5E9),
-        'iconColor': const Color(0xFF2E7D32),
-        'onTap': () => context.push('/getting-started'),
+        'label': 'Medicines',
+        'icon': Icons.medication,
+        'color': const Color(0xFFEF6C00),
+        'bgColor': const Color(0xFFFFF3E0),
+        'onTap': () => context.go('/medicines'),
       },
       {
-        'label': 'AI\nInsights',
-        'icon': Icons.auto_awesome_rounded,
+        'label': 'Symptoms',
+        'icon': Icons.sick_outlined,
+        'color': const Color(0xFF8E24AA),
         'bgColor': const Color(0xFFF3E5F5),
-        'iconColor': const Color(0xFF7B1FA2),
-        'onTap': () => context.push('/ai-insights'),
+        'onTap': () => context.push('/symptom-analyzer'),
       },
       {
-        'label': 'Log\nVital',
-        'icon': Icons.favorite_rounded,
+        'label': 'Doctor Visits',
+        'icon': Icons.local_hospital,
+        'color': const Color(0xFF00796B),
         'bgColor': const Color(0xFFE0F2F1),
-        'iconColor': const Color(0xFF00796B),
-        'onTap': () => context.push('/vitals/add'),
+        'onTap': () => context.push('/visits'),
       },
       {
-        'label': 'Log\nSymptom',
-        'icon': Icons.sick_rounded,
-        'bgColor': const Color(0xFFFFF8E1),
-        'iconColor': const Color(0xFFF57F17),
-        'onTap': () => context.push('/symptoms/add'),
+        'label': 'Prescriptions',
+        'icon': Icons.description,
+        'color': const Color(0xFF5D4037),
+        'bgColor': const Color(0xFFEFEBE9),
+        'onTap': () => context.push('/prescriptions'),
+      },
+      {
+        'label': 'Weekly Charts',
+        'icon': Icons.bar_chart,
+        'color': const Color(0xFF3F51B5),
+        'bgColor': const Color(0xFFE8EAF6),
+        'onTap': () => context.go('/vitals'),
+      },
+      {
+        'label': 'PDF Report',
+        'icon': Icons.picture_as_pdf,
+        'color': const Color(0xFF455A64),
+        'bgColor': const Color(0xFFECEFF1),
+        'onTap': () => context.go('/reports'),
+      },
+      {
+        'label': 'Emergency SOS',
+        'icon': Icons.emergency,
+        'color': const Color(0xFFC62828),
+        'bgColor': const Color(0xFFFFEBEE),
+        'onTap': () => context.push('/emergency'),
+      },
+      {
+        'label': 'Profile',
+        'icon': Icons.person,
+        'color': const Color(0xFF00838F),
+        'bgColor': const Color(0xFFE0F7FA),
+        'onTap': () => context.push('/profile'),
       },
     ];
 
-    return Row(
-      children: blocks.map((b) {
-        return Expanded(
-          child: GestureDetector(
-            onTap: b['onTap'] as VoidCallback,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              height: 100,
-              decoration: BoxDecoration(
-                color: b['bgColor'] as Color,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  )
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    b['icon'] as IconData,
-                    color: b['iconColor'] as Color,
-                    size: 26,
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.35,
+      ),
+      itemCount: actions.length,
+      itemBuilder: (context, index) {
+        final act = actions[index];
+        return GestureDetector(
+          onTap: act['onTap'] as VoidCallback,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade100, width: 1.0),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: act['bgColor'] as Color,
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    b['label'] as String,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: (b['iconColor'] as Color).withValues(alpha: 0.9),
-                      height: 1.2,
-                    ),
+                  child: Icon(
+                    act['icon'] as IconData,
+                    color: act['color'] as Color,
+                    size: 24,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  act['label'] as String,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
         );
-      }).toList(),
+      },
     );
   }
 
