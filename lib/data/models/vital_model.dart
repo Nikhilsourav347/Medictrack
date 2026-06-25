@@ -76,11 +76,11 @@ class VitalModel {
     );
   }
 
-  get bloodSugar => null;
+  double? get bloodSugar => bloodGlucose;
 
-  get sugarType => null;
+  String? get sugarType => 'fasting';
 
-  get spo2 => null;
+  double? get spo2 => oxygenSaturation;
 
   VitalModel copyWith({
     int? id,

@@ -1,3 +1,4 @@
+// lib/core/router/app_router.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/dashboard/screens/dashboard_screen.dart';
@@ -29,7 +30,7 @@ class AppRouter {
 
   static final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/dashboard',
+    initialLocation: '/',
     refreshListenable: AuthHelper(),
     redirect: (context, state) {
       final auth = AuthHelper();
@@ -47,7 +48,7 @@ class AppRouter {
 
       if (isOnboarding) {
         return isLoggedIn
-            ? (isAdmin ? '/admin/dashboard' : '/dashboard')
+            ? (isAdmin ? '/admin/dashboard' : '/')
             : (acceptedPrecautions ? '/login' : '/getting-started');
       }
 
@@ -59,13 +60,13 @@ class AppRouter {
         return (isLoggingIn || isGettingStarted) ? null : '/login';
       }
       if (isLoggedIn && isLoggingIn) {
-        return isAdmin ? '/admin/dashboard' : '/dashboard';
+        return isAdmin ? '/admin/dashboard' : '/';
       }
       if (isAdmin && !state.matchedLocation.startsWith('/admin')) {
         return '/admin/dashboard';
       }
       if (!isAdmin && state.matchedLocation.startsWith('/admin')) {
-        return '/dashboard';
+        return '/';
       }
       return null;
     },
@@ -97,7 +98,7 @@ class AppRouter {
         },
         routes: [
           GoRoute(
-            path: '/dashboard',
+            path: '/',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: DashboardScreen(),
             ),
@@ -113,6 +114,16 @@ class AppRouter {
             pageBuilder: (context, state) => const NoTransitionPage(
               child: MedicinesScreen(),
             ),
+          ),
+          GoRoute(
+            path: '/symptoms',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: SymptomsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/reports',
+            builder: (context, state) => const ReportsScreen(),
           ),
           GoRoute(
             path: '/prescriptions',
@@ -181,11 +192,6 @@ class AppRouter {
         builder: (context, state) => const AiInsightsScreen(),
       ),
       GoRoute(
-        path: '/reports',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const ReportsScreen(),
-      ),
-      GoRoute(
         path: '/prescriptions/add',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const AddPrescriptionScreen(),
@@ -205,28 +211,40 @@ class _AppShell extends StatefulWidget {
 class _AppShellState extends State<_AppShell> {
   int _currentIndex = 0;
 
-  static const _routes = [
-    '/dashboard',
-    '/vitals',
-    '/medicines',
-    '/prescriptions',
-    '/symptom-analyzer',
-    '/profile',
-  ];
+  int _locationToIndex(String location) {
+    if (location == '/') return 0;
+    if (location.startsWith('/vitals')) return 1;
+    if (location.startsWith('/medicines')) return 2;
+    if (location.startsWith('/symptoms')) return 3;
+    if (location.startsWith('/reports')) return 4;
+    return 0;
+  }
 
   void _onTabTapped(int index) {
     setState(() => _currentIndex = index);
-    context.go(_routes[index]);
+    switch (index) {
+      case 0:
+        context.go('/');
+        break;
+      case 1:
+        context.go('/vitals');
+        break;
+      case 2:
+        context.go('/medicines');
+        break;
+      case 3:
+        context.go('/symptoms');
+        break;
+      case 4:
+        context.go('/reports');
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Sync index with current location
     final location = GoRouterState.of(context).uri.toString();
-    final idx = _routes.indexWhere((r) => location.startsWith(r));
-    if (idx >= 0 && idx != _currentIndex) {
-      _currentIndex = idx;
-    }
+    _currentIndex = _locationToIndex(location);
 
     return Scaffold(
       body: widget.child,
@@ -238,33 +256,28 @@ class _AppShellState extends State<_AppShell> {
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
+            selectedIcon: Icon(Icons.home),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.monitor_heart_outlined),
-            selectedIcon: Icon(Icons.monitor_heart_rounded),
+            icon: Icon(Icons.favorite_outline),
+            selectedIcon: Icon(Icons.favorite),
             label: 'Vitals',
           ),
           NavigationDestination(
             icon: Icon(Icons.medication_outlined),
-            selectedIcon: Icon(Icons.medication_rounded),
+            selectedIcon: Icon(Icons.medication),
             label: 'Medicines',
           ),
           NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long_rounded),
-            label: 'Prescriptions',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.sick_outlined),
-            selectedIcon: Icon(Icons.sick_rounded),
+            icon: Icon(Icons.edit_note_outlined),
+            selectedIcon: Icon(Icons.edit_note),
             label: 'Symptoms',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
+            icon: Icon(Icons.description_outlined),
+            selectedIcon: Icon(Icons.description),
+            label: 'Reports',
           ),
         ],
       ),

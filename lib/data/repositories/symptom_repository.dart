@@ -59,6 +59,11 @@ class SymptomRepository {
     return maps.map((m) => SymptomModel.fromMap(m)).toList();
   }
 
+  Future<List<SymptomModel>> getSymptomsByDateRange(
+      String startDate, String endDate, {String? userId}) async {
+    return getSymptomsBetween(startDate, endDate, userId: userId);
+  }
+
   Future<List<SymptomModel>> getRecentSymptoms(int limit, {String? userId}) async {
     final targetUser = userId ?? _getCurrentUserEmail();
     if (kIsWeb) {

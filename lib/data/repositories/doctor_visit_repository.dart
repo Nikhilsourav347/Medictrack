@@ -58,6 +58,11 @@ class DoctorVisitRepository {
     return maps.map((m) => DoctorVisitModel.fromMap(m)).toList();
   }
 
+  Future<List<DoctorVisitModel>> getVisitsByDateRange(
+      String startDate, String endDate, {String? userId}) async {
+    return getVisitsBetween(startDate, endDate, userId: userId);
+  }
+
   Future<DoctorVisitModel?> getLatestVisit({String? userId}) async {
     final targetUser = userId ?? _getCurrentUserEmail();
     if (kIsWeb) {

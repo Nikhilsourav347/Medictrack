@@ -59,6 +59,11 @@ class VitalRepository {
     return maps.map((m) => VitalModel.fromMap(m)).toList();
   }
 
+  Future<List<VitalModel>> getVitalsByDateRange(
+      String startDate, String endDate, {String? userId}) async {
+    return getVitalsBetween(startDate, endDate, userId: userId);
+  }
+
   Future<VitalModel?> getLatestVital({String? userId}) async {
     final targetUser = userId ?? _getCurrentUserEmail();
     if (kIsWeb) {

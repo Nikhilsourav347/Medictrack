@@ -1,3 +1,4 @@
+// lib/features/reports/screens/reports_screen.dart
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -5,12 +6,14 @@ import 'package:printing/printing.dart';
 import '../../../data/models/vital_model.dart';
 import '../../../data/models/symptom_model.dart';
 import '../../../data/models/doctor_visit_model.dart';
+import '../../../data/models/medicine_model.dart';
+import '../../../data/models/user_profile_model.dart';
 import '../../../data/repositories/vital_repository.dart';
 import '../../../data/repositories/symptom_repository.dart';
 import '../../../data/repositories/doctor_visit_repository.dart';
+import '../../../data/repositories/medicine_repository.dart';
+import '../../../data/repositories/user_profile_repository.dart';
 import '../../../shared/utils/date_utils.dart';
-import '../../../shared/widgets/custom_app_bar.dart';
-import '../../../shared/widgets/loading_indicator.dart';
 import '../widgets/date_range_picker_widget.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -21,637 +24,853 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  final VitalRepository _vitalRepo = VitalRepository();
-  final SymptomRepository _symptomRepo = SymptomRepository();
-  final DoctorVisitRepository _visitRepo = DoctorVisitRepository();
-
-  DateRangeOption _rangeOption = DateRangeOption.last7Days;
-  DateTime _startDate = DateTime.now().subtract(const Duration(days: 7));
-  DateTime _endDate = DateTime.now();
+  String _selectedFilter = 'week';
+  String _startDate = '';
+  String _endDate = '';
 
   List<VitalModel> _vitals = [];
   List<SymptomModel> _symptoms = [];
   List<DoctorVisitModel> _visits = [];
+  int _activeMedicinesCount = 0;
 
-  bool _loading = false;
-  bool _generatingPdf = false;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    _startDate = _formatDate(now.subtract(const Duration(days: 7)));
+    _endDate = _formatDate(now);
     _loadData();
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
-    final start = _dateString(_startDate);
-    final end = _dateString(_endDate);
+    try {
+      final vitals = await VitalRepository().getVitalsByDateRange(_startDate, _endDate);
+      final symptoms = await SymptomRepository().getSymptomsByDateRange(_startDate, _endDate);
+      final visits = await DoctorVisitRepository().getVisitsByDateRange(_startDate, _endDate);
+      final activeMeds = await MedicineRepository().getActiveMedicines();
 
-    final vitals = await _vitalRepo.getVitalsBetween(start, end);
-    final symptoms = await _symptomRepo.getSymptomsBetween(start, end);
-    final visits = await _visitRepo.getVisitsBetween(start, end);
-
-    if (mounted) {
       setState(() {
         _vitals = vitals;
         _symptoms = symptoms;
         _visits = visits;
+        _activeMedicinesCount = activeMeds.length;
         _loading = false;
       });
+    } catch (e) {
+      setState(() => _loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading reports data: $e')),
+        );
+      }
     }
   }
 
-  String _dateString(DateTime dt) =>
-      '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
-
-  void _onRangeOptionChanged(DateRangeOption option) {
-    setState(() {
-      _rangeOption = option;
-      final now = DateTime.now();
-      if (option == DateRangeOption.last7Days) {
-        _startDate = now.subtract(const Duration(days: 7));
-        _endDate = now;
-        _loadData();
-      } else if (option == DateRangeOption.last30Days) {
-        _startDate = now.subtract(const Duration(days: 30));
-        _endDate = now;
-        _loadData();
-      }
-    });
-  }
-
-  Future<void> _pickCustomRange() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(primary: Color(0xFF1D9E75)),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked != null) {
+  void _onFilterChanged(String filter, String start, String end) {
+    if (filter == 'custom') {
+      _showCustomRangePicker();
+    } else {
       setState(() {
-        _startDate = picked.start;
-        _endDate = picked.end;
-        _rangeOption = DateRangeOption.custom;
+        _selectedFilter = filter;
+        _startDate = start;
+        _endDate = end;
       });
       _loadData();
     }
   }
 
-  Future<void> _generatePdf() async {
-    setState(() => _generatingPdf = true);
+  Future<void> _showCustomRangePicker() async {
+    final initialStart = DateTime.tryParse(_startDate) ?? DateTime.now();
+    final initialEnd = DateTime.tryParse(_endDate) ?? DateTime.now();
+
+    final pickedRange = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDateRange: DateTimeRange(start: initialStart, end: initialEnd),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF1D9E75),
+              onPrimary: Colors.white,
+              onSurface: Colors.black87,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedRange != null) {
+      setState(() {
+        _selectedFilter = 'custom';
+        _startDate = _formatDate(pickedRange.start);
+        _endDate = _formatDate(pickedRange.end);
+      });
+      _loadData();
+    }
+  }
+
+  Future<void> _exportPdfReport() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Generating your health report...'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    setState(() => _loading = true);
+
     try {
+      final vitals = await VitalRepository().getVitalsByDateRange(_startDate, _endDate);
+      final symptoms = await SymptomRepository().getSymptomsByDateRange(_startDate, _endDate);
+      final visits = await DoctorVisitRepository().getVisitsByDateRange(_startDate, _endDate);
+      final List<MedicineModel> activeMedicines = await MedicineRepository().getActiveMedicines();
+      final UserProfileModel? userProfile = await UserProfileRepository().getProfile();
+
       final pdf = pw.Document();
 
+      pw.Widget buildPdfTable(List<String> headers, List<List<String>> rows) {
+        return pw.Table(
+          border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+          children: [
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF1D9E75)),
+              children: headers.map((h) => pw.Padding(
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(
+                  h,
+                  style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 8),
+                  textAlign: pw.TextAlign.center,
+                ),
+              )).toList(),
+            ),
+            ...List.generate(rows.length, (index) {
+              final row = rows[index];
+              final isEven = index % 2 == 0;
+              return pw.TableRow(
+                decoration: pw.BoxDecoration(color: isEven ? PdfColors.white : PdfColors.grey100),
+                children: row.map((cell) => pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(
+                    cell,
+                    style: const pw.TextStyle(fontSize: 8),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                )).toList(),
+              );
+            }),
+          ],
+        );
+      }
+
+      pw.Widget buildPdfFooter() {
+        return pw.Column(
+          children: [
+            pw.Divider(color: PdfColors.grey300, thickness: 0.5),
+            pw.SizedBox(height: 4),
+            pw.Align(
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                'Generated by MediTrack — Personal Health Companion',
+                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+              ),
+            ),
+          ],
+        );
+      }
+
       pdf.addPage(
-        pw.MultiPage(
+        pw.Page(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
-          build: (context) => [
-            // Header
-            pw.Row(children: [
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text('MediTrack Health Report',
-                      style: pw.TextStyle(
-                          fontSize: 24, fontWeight: pw.FontWeight.bold)),
+          build: (context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('MediTrack Health Report', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 8),
+                if (userProfile != null) ...[
+                  pw.Text('Patient: ${userProfile.name} (Age: ${userProfile.age ?? "N/A"}, Blood Group: ${userProfile.bloodGroup ?? "N/A"})',
+                      style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
                   pw.SizedBox(height: 4),
-                  pw.Text(
-                    '${AppDateUtils.formatDisplay(_dateString(_startDate))}  –  ${AppDateUtils.formatDisplay(_dateString(_endDate))}',
-                    style: const pw.TextStyle(
-                        fontSize: 12, color: PdfColors.grey600),
-                  ),
-                  pw.Text(
-                    'Generated on ${AppDateUtils.formatDisplay(AppDateUtils.todayString())}',
-                    style: const pw.TextStyle(
-                        fontSize: 10, color: PdfColors.grey500),
-                  ),
                 ],
-              ),
-            ]),
-            pw.SizedBox(height: 20),
-            pw.Divider(),
-            pw.SizedBox(height: 16),
+                pw.Text('Report period: $_startDate to $_endDate', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                pw.Text('Generated on: ${DateTime.now().toString().split('.').first}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                pw.SizedBox(height: 8),
+                pw.Divider(color: PdfColors.grey400, thickness: 0.5),
+                pw.SizedBox(height: 12),
 
-            // Summary stats
-            pw.Row(children: [
-              _pdfStatBox('Vital Records', '${_vitals.length}'),
-              pw.SizedBox(width: 16),
-              _pdfStatBox('Symptoms', '${_symptoms.length}'),
-              pw.SizedBox(width: 16),
-              _pdfStatBox('Doctor Visits', '${_visits.length}'),
-            ]),
-            pw.SizedBox(height: 20),
+                pw.Text('Summary', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 6),
+                pw.Bullet(text: 'Total vitals logged: ${vitals.length}', style: const pw.TextStyle(fontSize: 9)),
+                pw.Bullet(text: 'Total symptoms recorded: ${symptoms.length}', style: const pw.TextStyle(fontSize: 9)),
+                pw.Bullet(text: 'Total doctor visits: ${visits.length}', style: const pw.TextStyle(fontSize: 9)),
+                pw.Bullet(text: 'Active medicines: ${activeMedicines.length}', style: const pw.TextStyle(fontSize: 9)),
+                pw.SizedBox(height: 16),
 
-            // Vitals section
-            if (_vitals.isNotEmpty) ...[
-              _pdfSectionHeader('Vital Signs'),
-              pw.SizedBox(height: 8),
-              pw.TableHelper.fromTextArray(
-                headers: ['Date', 'BP (mmHg)', 'HR (bpm)', 'SpO₂ (%)', 'Temp (°C)', 'Glucose'],
-                data: _vitals.map((v) => [
-                  AppDateUtils.formatDisplay(v.recordedAt),
-                  v.systolic != null && v.diastolic != null
-                      ? '${v.systolic!.toInt()}/${v.diastolic!.toInt()}'
-                      : '—',
-                  v.heartRate != null ? '${v.heartRate!.toInt()}' : '—',
-                  v.oxygenSaturation != null ? '${v.oxygenSaturation!.toInt()}' : '—',
-                  v.temperature != null ? v.temperature!.toStringAsFixed(1) : '—',
-                  v.bloodGlucose != null ? '${v.bloodGlucose!.toInt()}' : '—',
-                ]).toList(),
-                headerStyle: pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold, fontSize: 9),
-                cellStyle: const pw.TextStyle(fontSize: 9),
-                headerDecoration: const pw.BoxDecoration(
-                    color: PdfColor.fromInt(0xFF1D9E75)),
-                headerAlignment: pw.Alignment.center,
-                cellAlignment: pw.Alignment.center,
-                border: pw.TableBorder.all(color: PdfColors.grey300),
-              ),
-              pw.SizedBox(height: 16),
-            ],
+                pw.Text('Vitals Log', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 8),
+                if (vitals.isEmpty)
+                  pw.Text('No vitals logged in this period.', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600))
+                else
+                  buildPdfTable(
+                    ['Date', 'BP (Sys/Dia)', 'Sugar', 'Temp', 'SpO2', 'Weight'],
+                    vitals.map((v) => [
+                      v.recordedAt.split(' ').first,
+                      v.systolic != null && v.diastolic != null ? '${v.systolic!.toInt()}/${v.diastolic!.toInt()}' : '-',
+                      v.bloodSugar != null ? v.bloodSugar!.toStringAsFixed(1) : '-',
+                      v.temperature != null ? '${v.temperature!.toStringAsFixed(1)}°C' : '-',
+                      v.spo2 != null ? '${v.spo2!.toInt()}%' : '-',
+                      v.weight != null ? '${v.weight!.toStringAsFixed(1)}kg' : '-',
+                    ]).toList(),
+                  ),
+                
+                pw.Spacer(),
+                buildPdfFooter(),
+              ],
+            );
+          },
+        ),
+      );
 
-            // Symptoms section
-            if (_symptoms.isNotEmpty) ...[
-              _pdfSectionHeader('Symptoms'),
-              pw.SizedBox(height: 8),
-              pw.TableHelper.fromTextArray(
-                headers: ['Date', 'Symptom', 'Severity', 'Notes'],
-                data: _symptoms.map((s) => [
-                  AppDateUtils.formatDisplay(s.recordedAt),
-                  s.symptomName,
-                  '${s.severity}/10',
-                  s.notes ?? '—',
-                ]).toList(),
-                headerStyle: pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold, fontSize: 9),
-                cellStyle: const pw.TextStyle(fontSize: 9),
-                headerDecoration: const pw.BoxDecoration(
-                    color: PdfColor.fromInt(0xFF1D9E75)),
-                border: pw.TableBorder.all(color: PdfColors.grey300),
-              ),
-              pw.SizedBox(height: 16),
-            ],
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Active Medicines', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 8),
+                if (activeMedicines.isEmpty)
+                  pw.Text('No active medicines.', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600))
+                else
+                  buildPdfTable(
+                    ['Medicine Name', 'Dosage', 'Frequency', 'Status'],
+                    activeMedicines.map((m) => [
+                      m.name,
+                      m.dosage ?? '-',
+                      m.frequency,
+                      m.isActive ? 'Active' : 'Inactive',
+                    ]).toList(),
+                  ),
+                pw.SizedBox(height: 16),
 
-            // Doctor visits section
-            if (_visits.isNotEmpty) ...[
-              _pdfSectionHeader('Doctor Visits'),
-              pw.SizedBox(height: 8),
-              ..._visits.map((v) => pw.Container(
-                margin: const pw.EdgeInsets.only(bottom: 8),
-                padding: const pw.EdgeInsets.all(10),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey300),
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-                ),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Row(children: [
-                      pw.Text('Doctor: ',
-                          style: pw.TextStyle(
-                              fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                      pw.Text(v.doctorName,
-                          style: const pw.TextStyle(fontSize: 10)),
-                      pw.Spacer(),
-                      pw.Text(AppDateUtils.formatDisplay(v.visitDate),
-                          style: const pw.TextStyle(
-                              fontSize: 10, color: PdfColors.grey600)),
-                    ]),
-                    if (v.diagnosis != null && v.diagnosis!.isNotEmpty) ...[
-                      pw.SizedBox(height: 4),
-                      pw.RichText(
-                        text: pw.TextSpan(children: [
-                          pw.TextSpan(
-                              text: 'Diagnosis: ',
-                              style: pw.TextStyle(
-                                  fontWeight: pw.FontWeight.bold,
-                                  fontSize: 9)),
-                          pw.TextSpan(
-                              text: v.diagnosis!,
-                              style: const pw.TextStyle(fontSize: 9)),
-                        ]),
-                      ),
-                    ],
-                    if (v.prescription != null &&
-                        v.prescription!.isNotEmpty) ...[
-                      pw.SizedBox(height: 2),
-                      pw.RichText(
-                        text: pw.TextSpan(children: [
-                          pw.TextSpan(
-                              text: 'Prescription: ',
-                              style: pw.TextStyle(
-                                  fontWeight: pw.FontWeight.bold,
-                                  fontSize: 9)),
-                          pw.TextSpan(
-                              text: v.prescription!,
-                              style: const pw.TextStyle(fontSize: 9)),
-                        ]),
-                      ),
-                    ],
-                  ],
-                ),
-              )),
-            ],
+                pw.Text('Symptoms Log', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 8),
+                if (symptoms.isEmpty)
+                  pw.Text('No symptoms recorded in this period.', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600))
+                else
+                  buildPdfTable(
+                    ['Date', 'Symptom', 'Severity'],
+                    symptoms.map((s) => [
+                      s.recordedAt.split(' ').first,
+                      s.symptomName,
+                      '${s.severity}/10',
+                    ]).toList(),
+                  ),
+                pw.SizedBox(height: 16),
 
-            if (_vitals.isEmpty && _symptoms.isEmpty && _visits.isEmpty) ...[
-              pw.SizedBox(height: 40),
-              pw.Center(
-                child: pw.Text(
-                  'No health data recorded for this date range.',
-                  style: const pw.TextStyle(
-                      fontSize: 14, color: PdfColors.grey500),
-                ),
-              ),
-            ],
-          ],
+                pw.Text('Doctor Visits', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 8),
+                if (visits.isEmpty)
+                  pw.Text('No doctor visits in this period.', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600))
+                else
+                  buildPdfTable(
+                    ['Date', 'Doctor', 'Diagnosis', 'Follow-up'],
+                    visits.map((v) => [
+                      v.visitDate.split(' ').first,
+                      v.doctorName,
+                      v.diagnosis ?? '-',
+                      v.followUpDate != null ? v.followUpDate!.split(' ').first : '-',
+                    ]).toList(),
+                  ),
+
+                pw.Spacer(),
+                buildPdfFooter(),
+              ],
+            );
+          },
         ),
       );
 
       final bytes = await pdf.save();
       await Printing.layoutPdf(onLayout: (_) async => bytes);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Report ready to save or share')),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PDF error: $e')),
+          SnackBar(content: Text('Error exporting report: $e')),
         );
       }
     } finally {
-      if (mounted) setState(() => _generatingPdf = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
-  pw.Widget _pdfStatBox(String label, String value) {
-    return pw.Expanded(
-      child: pw.Container(
-        padding: const pw.EdgeInsets.all(12),
-        decoration: pw.BoxDecoration(
-          color: const PdfColor.fromInt(0xFFF0FBF7),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
-          border: pw.Border.all(
-              color: const PdfColor.fromInt(0xFF1D9E75), width: 0.5),
+  Widget _buildSummaryGrid() {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.3,
+      children: [
+        _buildSummaryCard(
+          label: 'Vitals Logged',
+          value: '${_vitals.length}',
+          icon: Icons.favorite,
+          color: Colors.green,
         ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(value,
-                style: pw.TextStyle(
-                    fontSize: 22,
-                    fontWeight: pw.FontWeight.bold,
-                    color: const PdfColor.fromInt(0xFF1D9E75))),
-            pw.Text(label,
-                style: const pw.TextStyle(
-                    fontSize: 10, color: PdfColors.grey600)),
+        _buildSummaryCard(
+          label: 'Medicines Active',
+          value: '$_activeMedicinesCount',
+          icon: Icons.medication,
+          color: Colors.blue,
+        ),
+        _buildSummaryCard(
+          label: 'Symptoms Recorded',
+          value: '${_symptoms.length}',
+          icon: Icons.edit_note,
+          color: Colors.orange,
+        ),
+        _buildSummaryCard(
+          label: 'Doctor Visits',
+          value: '${_visits.length}',
+          icon: Icons.local_hospital,
+          color: Colors.purple,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          Center(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVitalsTrendSection() {
+    final bpVitals = _vitals.where((v) => v.systolic != null).toList();
+    final trendVitals = bpVitals.take(7).toList().reversed.toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Blood Pressure Trend (Systolic)',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        if (trendVitals.isEmpty)
+          Container(
+            height: 180,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300, width: 0.5),
+            ),
+            child: Center(
+              child: Text(
+                'No blood pressure data for this period',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+              ),
+            ),
+          )
+        else
+          Container(
+            height: 180,
+            padding: const EdgeInsets.only(top: 24, right: 16, bottom: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200, width: 0.5),
+            ),
+            child: CustomPaint(
+              size: const Size(double.infinity, 150),
+              painter: BPTrendPainter(trendVitals),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildRecentVitalsList() {
+    final recentVitals = _vitals.take(5).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Recent Vitals',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        if (recentVitals.isEmpty)
+          const Text('No recent vitals logged in this period.', style: TextStyle(color: Colors.grey, fontSize: 13))
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: recentVitals.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final vital = recentVitals[index];
+              return _buildVitalCard(vital);
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildVitalCard(VitalModel vital) {
+    final chips = <Widget>[];
+
+    if (vital.systolic != null && vital.diastolic != null) {
+      final color = _getBPColor(vital.systolic!);
+      chips.add(_buildVitalChip('BP: ${vital.systolic!.toInt()}/${vital.diastolic!.toInt()}', color));
+    }
+    if (vital.bloodSugar != null) {
+      final color = _getSugarColor(vital.bloodSugar!);
+      chips.add(_buildVitalChip('Sugar: ${vital.bloodSugar!.toStringAsFixed(1)}', color));
+    }
+    if (vital.temperature != null) {
+      final color = _getTempColor(vital.temperature!);
+      chips.add(_buildVitalChip('Temp: ${vital.temperature!.toStringAsFixed(1)}°C', color));
+    }
+    if (vital.spo2 != null) {
+      final color = _getSpO2Color(vital.spo2!);
+      chips.add(_buildVitalChip('SpO2: ${vital.spo2!.toInt()}%', color));
+    }
+    if (vital.weight != null) {
+      chips.add(_buildVitalChip('Weight: ${vital.weight!.toStringAsFixed(1)} kg', Colors.blue));
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Entry #${vital.id ?? ""}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              Text(
+                AppDateUtils.formatDisplayWithTime(vital.recordedAt),
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: chips,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getBPColor(double systolic) {
+    if (systolic < 120) return Colors.green;
+    if (systolic < 140) return Colors.amber;
+    return Colors.red;
+  }
+
+  Color _getSugarColor(double sugar) {
+    if (sugar < 100) return Colors.green;
+    if (sugar < 126) return Colors.amber;
+    return Colors.red;
+  }
+
+  Color _getTempColor(double temp) {
+    if (temp >= 36.1 && temp <= 37.2) return Colors.green;
+    if (temp > 37.2 && temp <= 38.0) return Colors.amber;
+    return Colors.red;
+  }
+
+  Color _getSpO2Color(double spo2) {
+    if (spo2 >= 95) return Colors.green;
+    if (spo2 >= 90) return Colors.amber;
+    return Colors.red;
+  }
+
+  Widget _buildVitalChip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentSymptomsList() {
+    final recentSymptoms = _symptoms.take(5).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Recent Symptoms',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        if (recentSymptoms.isEmpty)
+          const Text('No recent symptoms logged in this period.', style: TextStyle(color: Colors.grey, fontSize: 13))
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: recentSymptoms.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final symptom = recentSymptoms[index];
+              return _buildSymptomCard(symptom);
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSymptomCard(SymptomModel symptom) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                symptom.symptomName,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              Text(
+                AppDateUtils.formatDisplay(symptom.recordedAt),
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                'Severity: ${symptom.severity}/10',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth * (symptom.severity / 10.0);
+                    return Container(
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        width: width,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: _getSeverityColor(symptom.severity),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          if (symptom.notes != null && symptom.notes!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              symptom.notes!,
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
 
-  pw.Widget _pdfSectionHeader(String title) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: const pw.BoxDecoration(
-        color: PdfColor.fromInt(0xFF1D9E75),
-        borderRadius: pw.BorderRadius.all(pw.Radius.circular(4)),
-      ),
-      child: pw.Text(
-        title,
-        style: pw.TextStyle(
-          fontWeight: pw.FontWeight.bold,
-          fontSize: 12,
-          color: PdfColors.white,
-        ),
-      ),
-    );
+  Color _getSeverityColor(int severity) {
+    if (severity <= 3) return Colors.green;
+    if (severity <= 6) return Colors.amber;
+    return Colors.red;
   }
-
-  int get _totalRecords =>
-      _vitals.length + _symptoms.length + _visits.length;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: CustomAppBar(
-        title: 'Health Reports',
-        actions: [
-          if (!_loading)
-            TextButton.icon(
-              onPressed: _generatingPdf ? null : _generatePdf,
-              icon: _generatingPdf
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Color(0xFF1D9E75)))
-                  : const Icon(Icons.picture_as_pdf_outlined,
-                      size: 18),
-              label: const Text('PDF'),
-              style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF1D9E75)),
-            ),
-        ],
+      appBar: AppBar(
+        title: const Text('Health Reports'),
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        titleTextStyle: const TextStyle(
+          color: Color(0xFF1F2937),
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
       ),
-      body: Column(
-        children: [
-          // Date range picker
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: DateRangePickerWidget(
-              selected: _rangeOption,
-              startDate: _startDate,
-              endDate: _endDate,
-              onOptionChanged: _onRangeOptionChanged,
-              onPickCustomRange: _pickCustomRange,
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Summary counts
-          if (!_loading)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(children: [
-                _countBadge('${_vitals.length}', 'Vitals',
-                    Icons.monitor_heart_outlined, const Color(0xFF1D9E75)),
-                const SizedBox(width: 8),
-                _countBadge('${_symptoms.length}', 'Symptoms',
-                    Icons.sick_outlined, const Color(0xFFFFC107)),
-                const SizedBox(width: 8),
-                _countBadge('${_visits.length}', 'Visits',
-                    Icons.local_hospital_outlined, const Color(0xFF5C6BC0)),
-              ]),
-            ),
-
-          const SizedBox(height: 12),
-
-          // Content
-          Expanded(
-            child: _loading
-                ? const LoadingIndicator(message: 'Fetching health data...')
-                : _totalRecords == 0
-                    ? _buildEmpty()
-                    : RefreshIndicator(
-                        color: const Color(0xFF1D9E75),
-                        onRefresh: _loadData,
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-                          children: [
-                            if (_vitals.isNotEmpty) ...[
-                              _sectionHeader('Vital Signs',
-                                  Icons.monitor_heart_outlined,
-                                  const Color(0xFF1D9E75)),
-                              ..._vitals.map((v) => _VitalSummaryRow(vital: v)),
-                              const SizedBox(height: 16),
-                            ],
-                            if (_symptoms.isNotEmpty) ...[
-                              _sectionHeader('Symptoms',
-                                  Icons.sick_outlined,
-                                  const Color(0xFFFFC107)),
-                              ..._symptoms.map((s) => _SymptomSummaryRow(symptom: s)),
-                              const SizedBox(height: 16),
-                            ],
-                            if (_visits.isNotEmpty) ...[
-                              _sectionHeader('Doctor Visits',
-                                  Icons.local_hospital_outlined,
-                                  const Color(0xFF5C6BC0)),
-                              ..._visits.map((v) => _VisitSummaryRow(visit: v)),
-                              const SizedBox(height: 16),
-                            ],
-                          ],
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF1D9E75)))
+          : RefreshIndicator(
+              onRefresh: _loadData,
+              color: const Color(0xFF1D9E75),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DateRangePickerWidget(
+                      selectedFilter: _selectedFilter,
+                      startDate: _startDate,
+                      endDate: _endDate,
+                      onFilterChanged: _onFilterChanged,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSummaryGrid(),
+                    const SizedBox(height: 20),
+                    _buildVitalsTrendSection(),
+                    const SizedBox(height: 20),
+                    _buildRecentVitalsList(),
+                    const SizedBox(height: 20),
+                    _buildRecentSymptomsList(),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: _loading ? null : _exportPdfReport,
+                        icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+                        label: const Text(
+                          'Export PDF Report',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1D9E75),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 2,
                         ),
                       ),
-          ),
-        ],
-      ),
-
-      // Generate PDF FAB
-      floatingActionButton: _totalRecords > 0
-          ? FloatingActionButton.extended(
-              onPressed: _generatingPdf ? null : _generatePdf,
-              backgroundColor: const Color(0xFF1D9E75),
-              icon: _generatingPdf
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : const Icon(Icons.picture_as_pdf_outlined),
-              label: Text(_generatingPdf ? 'Generating...' : 'Generate PDF'),
-            )
-          : null,
-    );
-  }
-
-  Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1D9E75).withValues(alpha: 0.08),
-              shape: BoxShape.circle,
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
             ),
-            child: Icon(Icons.assessment_outlined,
-                size: 36,
-                color: const Color(0xFF1D9E75).withValues(alpha: 0.5)),
-          ),
-          const SizedBox(height: 16),
-          const Text('No data for this period',
-              style: TextStyle(
-                  fontSize: 17, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          Text(
-            'Try a wider date range or start logging your health data.',
-            style: TextStyle(
-                fontSize: 13, color: Colors.grey.shade500, height: 1.5),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _countBadge(
-      String count, String label, IconData icon, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Row(children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(count,
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: color)),
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 10, color: Colors.grey.shade600)),
-            ],
-          ),
-        ]),
-      ),
-    );
-  }
-
-  Widget _sectionHeader(String title, IconData icon, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 6),
-        Text(title,
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: color)),
-      ]),
     );
   }
 }
 
-// ── Summary row widgets ────────────────────────────────────────────────────
-
-class _VitalSummaryRow extends StatelessWidget {
-  final VitalModel vital;
-  const _VitalSummaryRow({required this.vital});
+class BPTrendPainter extends CustomPainter {
+  final List<VitalModel> vitals;
+  BPTrendPainter(this.vitals);
 
   @override
-  Widget build(BuildContext context) {
-    final parts = <String>[];
-    if (vital.systolic != null && vital.diastolic != null) {
-      parts.add('BP ${vital.systolic!.toInt()}/${vital.diastolic!.toInt()} mmHg');
+  void paint(Canvas canvas, Size size) {
+    if (vitals.isEmpty) return;
+
+    final paintLine = Paint()
+      ..color = const Color(0xFF1D9E75)
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final paintDot = Paint()
+      ..color = const Color(0xFF1D9E75)
+      ..style = PaintingStyle.fill;
+
+    final paintGrid = Paint()
+      ..color = Colors.grey.shade200
+      ..strokeWidth = 1;
+
+    const double paddingX = 40.0;
+    const double paddingY = 30.0;
+
+    final chartWidth = size.width - paddingX - 10;
+    final chartHeight = size.height - paddingY - 10;
+
+    double maxVal = vitals.map((v) => v.systolic!).reduce((a, b) => a > b ? a : b);
+    double minVal = vitals.map((v) => v.systolic!).reduce((a, b) => a < b ? a : b);
+    if (maxVal == minVal) {
+      maxVal += 20;
+      minVal -= 20;
+    } else {
+      final range = maxVal - minVal;
+      maxVal += range * 0.15;
+      minVal -= range * 0.15;
     }
-    if (vital.heartRate != null) parts.add('HR ${vital.heartRate!.toInt()} bpm');
-    if (vital.oxygenSaturation != null) parts.add('SpO₂ ${vital.oxygenSaturation!.toInt()}%');
-    if (vital.temperature != null) parts.add('Temp ${vital.temperature!.toStringAsFixed(1)}°C');
-    if (vital.bloodGlucose != null) parts.add('Glucose ${vital.bloodGlucose!.toInt()} mg/dL');
+    if (minVal < 0) minVal = 0;
 
-    return _SummaryRowBase(
-      icon: Icons.monitor_heart_outlined,
-      iconColor: const Color(0xFF1D9E75),
-      title: parts.join('  ·  '),
-      subtitle: AppDateUtils.formatDisplayWithTime(vital.recordedAt),
-    );
+    final points = <Offset>[];
+    final count = vitals.length;
+
+    for (int i = 0; i < count; i++) {
+      final val = vitals[i].systolic!;
+      final double x = paddingX + (count > 1 ? i * (chartWidth / (count - 1)) : chartWidth / 2);
+      final double y = size.height - paddingY - ((val - minVal) / (maxVal - minVal) * chartHeight);
+      points.add(Offset(x, y));
+    }
+
+    for (int i = 0; i <= 3; i++) {
+      final double y = size.height - paddingY - (i * (chartHeight / 3));
+      canvas.drawLine(Offset(paddingX, y), Offset(size.width - 10, y), paintGrid);
+
+      final double gridVal = minVal + (i * ((maxVal - minVal) / 3));
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: gridVal.toStringAsFixed(0),
+          style: TextStyle(color: Colors.grey.shade500, fontSize: 10),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(canvas, Offset(5, y - textPainter.height / 2));
+    }
+
+    if (count > 1) {
+      final path = Path()..moveTo(points[0].dx, points[0].dy);
+      for (int i = 1; i < count; i++) {
+        path.lineTo(points[i].dx, points[i].dy);
+      }
+      canvas.drawPath(path, paintLine);
+    }
+
+    for (int i = 0; i < count; i++) {
+      final pt = points[i];
+      final val = vitals[i].systolic!;
+      canvas.drawCircle(pt, 5, paintDot);
+
+      final valPainter = TextPainter(
+        text: TextSpan(
+          text: val.toStringAsFixed(0),
+          style: const TextStyle(color: Color(0xFF1D9E75), fontSize: 10, fontWeight: FontWeight.bold),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      valPainter.paint(canvas, Offset(pt.dx - valPainter.width / 2, pt.dy - valPainter.height - 4));
+
+      final dateStr = _formatDateLabel(vitals[i].recordedAt);
+      final datePainter = TextPainter(
+        text: TextSpan(
+          text: dateStr,
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 8),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      datePainter.paint(canvas, Offset(pt.dx - datePainter.width / 2, size.height - paddingY + 6));
+    }
   }
-}
 
-class _SymptomSummaryRow extends StatelessWidget {
-  final SymptomModel symptom;
-  const _SymptomSummaryRow({required this.symptom});
+  String _formatDateLabel(String recordedAt) {
+    try {
+      final dt = DateTime.parse(recordedAt);
+      return '${dt.day}/${dt.month}';
+    } catch (_) {
+      return '';
+    }
+  }
 
   @override
-  Widget build(BuildContext context) {
-    final color = symptom.severity >= 7
-        ? const Color(0xFFE53935)
-        : symptom.severity >= 4
-            ? const Color(0xFFFFC107)
-            : const Color(0xFF1D9E75);
-    return _SummaryRowBase(
-      icon: Icons.sick_outlined,
-      iconColor: const Color(0xFFFFC107),
-      title: symptom.symptomName,
-      subtitle: AppDateUtils.formatDisplayWithTime(symptom.recordedAt),
-      trailing: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          '${symptom.severity}/10',
-          style: TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w700, color: color),
-        ),
-      ),
-    );
-  }
-}
-
-class _VisitSummaryRow extends StatelessWidget {
-  final DoctorVisitModel visit;
-  const _VisitSummaryRow({required this.visit});
-
-  @override
-  Widget build(BuildContext context) {
-    return _SummaryRowBase(
-      icon: Icons.local_hospital_outlined,
-      iconColor: const Color(0xFF5C6BC0),
-      title: visit.doctorName,
-      subtitle: '${AppDateUtils.formatDisplay(visit.visitDate)}'
-          '${visit.diagnosis != null ? "  ·  ${visit.diagnosis}" : ""}',
-    );
-  }
-}
-
-class _SummaryRowBase extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final Widget? trailing;
-
-  const _SummaryRowBase({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Row(children: [
-        Icon(icon, size: 16, color: iconColor),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 2),
-              Text(subtitle,
-                  style: TextStyle(
-                      fontSize: 10, color: Colors.grey.shade500),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis),
-            ],
-          ),
-        ),
-        if (trailing != null) trailing!,
-      ]),
-    );
+  bool shouldRepaint(covariant BPTrendPainter oldDelegate) {
+    return oldDelegate.vitals != vitals;
   }
 }
