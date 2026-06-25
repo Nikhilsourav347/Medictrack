@@ -216,9 +216,7 @@ class _AppShellState extends State<_AppShell> {
     if (location.startsWith('/vitals')) return 1;
     if (location.startsWith('/medicines')) return 2;
     if (location.startsWith('/prescriptions')) return 3;
-    if (location.startsWith('/symptoms')) return 4;
-    if (location.startsWith('/symptom-analyzer')) return 4;
-    if (location.startsWith('/profile')) return 5;
+    if (location.startsWith('/profile')) return 4;
     return 0;
   }
 
@@ -238,9 +236,6 @@ class _AppShellState extends State<_AppShell> {
         context.go('/prescriptions');
         break;
       case 4:
-        context.go('/symptoms');
-        break;
-      case 5:
         context.go('/profile');
         break;
     }
@@ -278,11 +273,6 @@ class _AppShellState extends State<_AppShell> {
             icon: Icon(Icons.receipt_long_outlined),
             selectedIcon: Icon(Icons.receipt_long),
             label: 'Prescriptions',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.edit_note_outlined),
-            selectedIcon: Icon(Icons.edit_note),
-            label: 'Symptoms',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline_rounded),
