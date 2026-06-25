@@ -335,13 +335,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'bgColor': const Color(0xFFFFEBEE),
         'onTap': () => context.push('/emergency'),
       },
-      {
-        'label': 'Profile',
-        'icon': Icons.person,
-        'color': const Color(0xFF00838F),
-        'bgColor': const Color(0xFFE0F7FA),
-        'onTap': () => context.push('/profile'),
-      },
     ];
 
     return GridView.builder(
