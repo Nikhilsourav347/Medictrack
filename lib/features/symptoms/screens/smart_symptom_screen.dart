@@ -27,6 +27,7 @@ class _SmartSymptomScreenState extends State<SmartSymptomScreen> {
   final SpeechService _speechService = SpeechService();
   final TtsService _ttsService = TtsService();
   final TextEditingController _textController = TextEditingController();
+  final GeminiSymptomService _geminiService = GeminiSymptomService();
 
   bool _isListening = false;
   String? _voiceTranscript;
@@ -38,6 +39,7 @@ class _SmartSymptomScreenState extends State<SmartSymptomScreen> {
 
   SymptomAnalysis? _analysisResult;
   int? _savedSymptomId;
+  String _patientContext = 'No medical profile on file.';
 
   final List<String> _loadingTexts = [
     "Reading your symptom...",
@@ -45,6 +47,34 @@ class _SmartSymptomScreenState extends State<SmartSymptomScreen> {
     "Analyzing the image...",
     "Preparing your advice...",
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPatientContext();
+  }
+
+  Future<void> _loadPatientContext() async {
+    try {
+      final profile = await UserProfileRepository().getProfile();
+      final vitals = await VitalRepository().getVitalsByDateRange(
+        AppDateUtils.daysAgoString(7),
+        AppDateUtils.todayString(),
+      );
+      final medicines = await MedicineRepository().getActiveMedicines();
+      if (mounted) {
+        setState(() {
+          _patientContext = GeminiSymptomService.buildPatientContext(
+            profile,
+            vitals,
+            medicines,
+          );
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading patient context: $e");
+    }
+  }
 
   @override
   void dispose() {
@@ -56,7 +86,9 @@ class _SmartSymptomScreenState extends State<SmartSymptomScreen> {
   }
 
   bool get _canAnalyze {
-    return (_voiceTranscript != null && _voiceTranscript!.isNotEmpty) || (_imageBytes != null);
+    return !_isAnalyzing &&
+        ((_voiceTranscript != null && _voiceTranscript!.isNotEmpty) ||
+            (_imageBytes != null));
   }
 
   Future<void> _startSpeechListening() async {
@@ -117,6 +149,7 @@ class _SmartSymptomScreenState extends State<SmartSymptomScreen> {
   }
 
   void _startAnalysis() async {
+    if (_isAnalyzing) return;
     await _ttsService.stop();
     setState(() {
       _isAnalyzing = true;
@@ -134,20 +167,11 @@ class _SmartSymptomScreenState extends State<SmartSymptomScreen> {
     });
 
     try {
-      final profile = await UserProfileRepository().getProfile();
-      final recentVitals = await VitalRepository().getRecentVitals(5);
-      final activeMedicines = await MedicineRepository().getActiveMedicines();
-      final patientContext = GeminiSymptomService.buildPatientContext(
-        profile,
-        recentVitals,
-        activeMedicines,
-      );
-
-      final result = await GeminiSymptomService().analyzeSymptom(
+      final result = await _geminiService.analyzeSymptom(
         voiceDescription: _voiceTranscript,
         textDescription: _textController.text,
         imageBytes: _imageBytes,
-        patientContext: patientContext,
+        patientContext: _patientContext,
       );
 
       _loadingTimer?.cancel();

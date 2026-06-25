@@ -1,8 +1,9 @@
 // lib/features/symptoms/services/gemini_symptom_service.dart
 
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:http/http.dart' as http;
 import '../../../data/models/user_profile_model.dart';
 import '../../../data/models/vital_model.dart';
 import '../../../data/models/medicine_model.dart';
@@ -37,66 +38,128 @@ class SymptomAnalysis {
 }
 
 class GeminiSymptomService {
+  static const String _baseUrl = 
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+  
+  // Cache to avoid duplicate calls
+  static String? _lastInputHash;
+  static SymptomAnalysis? _lastResult;
+  
+  // Single call, everything bundled
   Future<SymptomAnalysis> analyzeSymptom({
+    required String patientContext,
     String? voiceDescription,
     String? textDescription,
     Uint8List? imageBytes,
-    required String patientContext,
   }) async {
     String? apiKey;
     try {
       apiKey = dotenv.env['GEMINI_API_KEY'];
-    } catch (_) {
-      // dotenv is not initialized
-    }
+    } catch (_) {}
     apiKey ??= const String.fromEnvironment('GEMINI_API_KEY');
-    
+
     if (apiKey.trim().isEmpty || apiKey == 'YOUR_GEMINI_API_KEY_HERE') {
       throw Exception(
         "Gemini API key is not configured.\n\n"
         "To fix this:\n"
         "1. Open the '.env' file in the root of the 'meditrack' project.\n"
-        "2. Add your actual Gemini API key there:\n"
-        "   GEMINI_API_KEY=your_key_here\n\n"
-        "Or run your build with --dart-define=GEMINI_API_KEY=your_key_here."
+        "2. Add your actual Gemini API key:\n"
+        "   GEMINI_API_KEY=your_key_here"
       );
     }
 
-    final model = GenerativeModel(
-      model: 'gemini-2.0-flash',
-      apiKey: apiKey,
-      systemInstruction: Content.system(
-        "You are a medical first-aid assistant in a personal health app. You receive a patient's medical profile, their symptom description, and optionally a photo of their wound, rash, eye, or skin issue. Analyze everything together. Consider their existing medical conditions and current medicines when giving advice — for example if they are diabetic, treat any wound as higher risk. Do NOT use rigid categories — reason naturally based on what you observe.\n\n"
-        "Structure your response exactly like this with no extra text outside these labels:\n\n"
-        "ASSESSMENT: Describe what you see or understand from the image and description in 2 sentences.\n\n"
-        "SEVERITY: One word only — MINOR or MODERATE or SERIOUS or EMERGENCY\n\n"
-        "ADVICE: Give 3 to 5 specific steps the patient should do right now. Be specific to what you see — for wounds mention cleaning, ointment, dressing, signs of infection. For rash mention triggers, topical relief. For eye issues mention rinsing. Number each step.\n\n"
-        "MEDICINES: Name a specific safe over-the-counter medicine if appropriate. If their allergies or conditions make it unsafe, explain why and say what to avoid. If prescription is needed, say so clearly.\n\n"
-        "WATCH_FOR: List 2 to 3 warning signs that mean they must go to a hospital immediately.\n\n"
-        "VOICE_SUMMARY: Write exactly 2 sentences in plain simple language summarizing the advice. No medical jargon. This will be read aloud to the patient.\n\n"
-        "Never diagnose. Always recommend professional care for anything beyond minor issues."
-      ),
+    // Check cache first
+    final inputHash = _buildHash(
+      patientContext, voiceDescription, textDescription, imageBytes
     );
-
-    final List<Part> parts = [];
-    parts.add(TextPart(patientContext));
-
-    if (voiceDescription != null && voiceDescription.isNotEmpty) {
-      parts.add(TextPart("Voice Description of Symptom: $voiceDescription"));
+    if (inputHash == _lastInputHash && _lastResult != null) {
+      return _lastResult!;
     }
-
-    if (textDescription != null && textDescription.isNotEmpty) {
-      parts.add(TextPart("Text Description of Symptom: $textDescription"));
-    }
-
-    if (imageBytes != null) {
-      parts.add(DataPart('image/jpeg', imageBytes));
-    }
-
-    final response = await model.generateContent([Content.multi(parts)]);
-    final responseText = response.text ?? '';
     
-    return parseResponse(responseText);
+    // Build all parts in one shot
+    final parts = _buildParts(
+      patientContext, voiceDescription, textDescription, imageBytes
+    );
+    
+    final response = await http.post(
+      Uri.parse('$_baseUrl?key=$apiKey'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'contents': [{'parts': parts}],
+        'generationConfig': {
+          'temperature': 0.3,
+          'maxOutputTokens': 500,
+        }
+      }),
+    );
+    
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final resultText = data['candidates'][0]['content']['parts'][0]['text'] as String;
+      
+      final parsed = parseResponse(resultText);
+      // Save to cache
+      _lastInputHash = inputHash;
+      _lastResult = parsed;
+      return parsed;
+    } else {
+      throw Exception('API error ${response.statusCode}');
+    }
+  }
+  
+  String _buildHash(String ctx, String? voice, String? text, Uint8List? img) {
+    return '${ctx.hashCode}_${voice?.hashCode}_${text?.hashCode}_${img?.length}';
+  }
+  
+  List<Map<String, dynamic>> _buildParts(
+    String patientContext,
+    String? voiceDescription,
+    String? textDescription,
+    Uint8List? imageBytes,
+  ) {
+    final parts = <Map<String, dynamic>>[];
+    
+    // 1. System instruction
+    parts.add({
+      'text': '''You are a medical first-aid AI assistant in a health app.
+Analyze the patient profile, symptom description, and image (if provided).
+Give a complete assessment in ONE response. Do not ask follow-up questions.
+Work with whatever information is given.
+Provide your complete assessment in one response. Do not ask the user any follow-up questions. Work with whatever information is provided.
+
+Respond EXACTLY in this format:
+ASSESSMENT: [2 sentences on what you observe]
+SEVERITY: [MINOR or MODERATE or SERIOUS or EMERGENCY]
+ADVICE: [3-5 numbered actionable steps specific to what you see]
+MEDICINES: [Specific OTC suggestion OR reason why not safe for this patient]
+WATCH_FOR: [2-3 signs that mean go to hospital immediately]
+VOICE_SUMMARY: [2 sentences max, plain language, for text-to-speech]'''
+    });
+    
+    // 2. Patient context
+    parts.add({'text': 'PATIENT PROFILE:\n$patientContext'});
+    
+    // 3. Voice description if available
+    if (voiceDescription != null && voiceDescription.isNotEmpty) {
+      parts.add({'text': 'SYMPTOM (spoken): $voiceDescription'});
+    }
+    
+    // 4. Text description if available
+    if (textDescription != null && textDescription.isNotEmpty) {
+      parts.add({'text': 'EXTRA DETAILS: $textDescription'});
+    }
+    
+    // 5. Image if available - base64 encoded
+    if (imageBytes != null) {
+      parts.add({
+        'inlineData': {
+          'mimeType': 'image/jpeg',
+          'data': base64Encode(imageBytes),
+        }
+      });
+    }
+    
+    return parts;
   }
 
   static SymptomAnalysis parseResponse(String text) {
@@ -132,72 +195,33 @@ class GeminiSymptomService {
       voiceSummary: voiceSummary.isEmpty ? 'Your symptom analysis is complete.' : voiceSummary,
     );
   }
-
+  
+  // Build patient context string from SQLite data
   static String buildPatientContext(
     UserProfileModel? profile,
     List<VitalModel> recentVitals,
     List<MedicineModel> activeMedicines,
   ) {
-    final buffer = StringBuffer();
-    buffer.writeln("Patient Profile Context:");
+    final b = StringBuffer();
     if (profile != null) {
-      buffer.writeln("- Name: ${profile.name}");
-      buffer.writeln("- Age: ${profile.age ?? 'Unknown'}");
-      buffer.writeln("- Blood Group: ${profile.bloodGroup ?? 'Unknown'}");
-      buffer.writeln("- Existing Conditions: ${profile.conditions ?? 'None stated'}");
-      buffer.writeln("- Allergies: ${profile.allergies ?? 'None stated'}");
-    } else {
-      buffer.writeln("- Name: Guest");
-      buffer.writeln("- Age: Unknown");
-      buffer.writeln("- Blood Group: Unknown");
-      buffer.writeln("- Existing Conditions: None stated");
-      buffer.writeln("- Allergies: None stated");
-    }
-
-    buffer.writeln("\nCurrent Medicines:");
-    if (activeMedicines.isEmpty) {
-      buffer.writeln("- None active");
-    } else {
-      for (var med in activeMedicines) {
-        buffer.writeln("- ${med.name} (${med.dosage ?? 'No dose specified'}), Frequency: ${med.frequency}");
+      if (profile.conditions?.isNotEmpty == true) {
+        b.writeln('Conditions: ${profile.conditions}');
+      }
+      if (profile.allergies?.isNotEmpty == true) {
+        b.writeln('Allergies: ${profile.allergies}');
+      }
+      if (profile.bloodGroup?.isNotEmpty == true) {
+        b.writeln('Blood group: ${profile.bloodGroup}');
       }
     }
-
-    buffer.writeln("\nRecent Vitals Readings:");
-    if (recentVitals.isEmpty) {
-      buffer.writeln("- No recent vitals available");
-    } else {
-      // Find most recent blood pressure and sugar reading
-      VitalModel? latestBp;
-      for (var v in recentVitals) {
-        if (v.systolic != null && v.diastolic != null) {
-          latestBp = v;
-          break;
-        }
-      }
-      
-      VitalModel? latestSugar;
-      for (var v in recentVitals) {
-        if (v.bloodGlucose != null) {
-          latestSugar = v;
-          break;
-        }
-      }
-
-      if (latestBp != null) {
-        buffer.writeln("- Most Recent BP: ${latestBp.systolic!.toInt()}/${latestBp.diastolic!.toInt()} mmHg (recorded at: ${latestBp.recordedAt})");
-      } else {
-        buffer.writeln("- Most Recent BP: N/A");
-      }
-
-      if (latestSugar != null) {
-        final sugarNote = latestSugar.notes ?? '';
-        buffer.writeln("- Most Recent Blood Sugar: ${latestSugar.bloodGlucose} mg/dL ($sugarNote) (recorded at: ${latestSugar.recordedAt})");
-      } else {
-        buffer.writeln("- Most Recent Blood Sugar: N/A");
-      }
+    if (activeMedicines.isNotEmpty) {
+      b.writeln('Current medicines: ${activeMedicines.map((m) => m.name).join(", ")}');
     }
-
-    return buffer.toString();
+    if (recentVitals.isNotEmpty) {
+      final v = recentVitals.first;
+      b.writeln('Latest vitals: BP ${v.systolic}/${v.diastolic} mmHg, '
+          'Sugar ${v.bloodGlucose} mg/dL, Temp ${v.temperature}°C');
+    }
+    return b.isEmpty ? 'No medical profile on file.' : b.toString();
   }
 }
