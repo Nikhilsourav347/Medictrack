@@ -1,4 +1,10 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/user_profile_model.dart';
 import '../../../data/repositories/user_profile_repository.dart';
@@ -28,6 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _loading = true;
   bool _saving = false;
   UserProfileModel? _existingProfile;
+  String? _profileImagePath;
 
   @override
   void initState() {
@@ -61,10 +68,113 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (AppConstants.bloodGroups.contains(profile.bloodGroup)) {
           _selectedBloodGroup = profile.bloodGroup;
         }
+        _profileImagePath = profile.profileImagePath;
         _loading = false;
       });
     } else {
       setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    
+    // Show bottom sheet to select source
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Color(0xFF1D9E75)),
+                title: const Text('Photo Gallery'),
+                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera, color: Color(0xFF1D9E75)),
+                title: const Text('Camera'),
+                onTap: () => Navigator.of(context).pop(ImageSource.camera),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source == null) return;
+
+    try {
+      final pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 500,
+        maxHeight: 500,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        String finalPath = pickedFile.path;
+        
+        // On non-web platform, copy to app's document directory to ensure persistence
+        if (!kIsWeb) {
+          final appDir = await getApplicationDocumentsDirectory();
+          final fileName = 'profile_pic_${DateTime.now().millisecondsSinceEpoch}${p.extension(pickedFile.path)}';
+          final savedFile = File(pickedFile.path);
+          final savedImage = await savedFile.copy('${appDir.path}/$fileName');
+          finalPath = savedImage.path;
+        }
+
+        setState(() {
+          _profileImagePath = finalPath;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            backgroundColor: const Color(0xFFE53935),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickContact() async {
+    if (kIsWeb) return;
+    try {
+      if (await FlutterContacts.requestPermission(readonly: true)) {
+        final contact = await FlutterContacts.openExternalPick();
+        if (contact != null && mounted) {
+          String name = contact.displayName;
+          String phone = '';
+          if (contact.phones.isNotEmpty) {
+            phone = contact.phones.first.number;
+          }
+          setState(() {
+            _emergencyNameCtrl.text = name;
+            _emergencyPhoneCtrl.text = phone;
+          });
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Contacts permission denied. Please enter details manually.'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick contact: $e')),
+        );
+      }
     }
   }
 
@@ -86,6 +196,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             emergencyContactPhone: _emergencyPhoneCtrl.text.trim().isNotEmpty ? _emergencyPhoneCtrl.text.trim() : '',
             lastUpdated: now,
             syncStatus: 0,
+            profileImagePath: _profileImagePath,
           )
         : UserProfileModel(
             name: _nameCtrl.text.trim(),
@@ -98,19 +209,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
             createdAt: now,
             lastUpdated: now,
             syncStatus: 0,
+            profileImagePath: _profileImagePath,
           );
 
     await _profileRepo.upsertProfile(profile);
 
     if (mounted) {
-      setState(() => _saving = false);
+      setState(() {
+        _saving = false;
+        _existingProfile = profile;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Profile saved successfully'),
           backgroundColor: Color(0xFF1D9E75),
         ),
       );
-      Navigator.of(context).pop(true);
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(true);
+      }
     }
   }
 
@@ -134,7 +251,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: const CustomAppBar(title: 'My Profile', showBack: true),
+      appBar: const CustomAppBar(title: 'My Profile', showBack: false),
       body: _loading
           ? const LoadingIndicator(message: 'Loading profile data...')
           : Form(
@@ -148,17 +265,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Center(
                       child: Column(
                         children: [
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              color: theme.primaryColor.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: theme.primaryColor.withValues(alpha: 0.2), width: 2),
-                            ),
-                            child: Icon(Icons.person_rounded, size: 48, color: theme.primaryColor),
+                          Stack(
+                            children: [
+                              GestureDetector(
+                                onTap: _pickImage,
+                                child: Container(
+                                  width: 100,
+                                  height: 100,
+                                  decoration: BoxDecoration(
+                                    color: theme.primaryColor.withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: theme.primaryColor.withValues(alpha: 0.2),
+                                      width: 3,
+                                    ),
+                                    image: _profileImagePath != null
+                                        ? DecorationImage(
+                                            image: kIsWeb
+                                                ? NetworkImage(_profileImagePath!) as ImageProvider
+                                                : FileImage(File(_profileImagePath!)),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.08),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: _profileImagePath == null
+                                      ? Icon(
+                                          Icons.person_rounded,
+                                          size: 60,
+                                          color: theme.primaryColor,
+                                        )
+                                      : null,
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: GestureDetector(
+                                  onTap: _pickImage,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: theme.primaryColor,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 2),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.15),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt_rounded,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
                           const Text(
                             'Personal Health Profile',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -284,10 +459,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _emergencyPhoneCtrl,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Contact Phone Number',
                           hintText: 'e.g. +1234567890',
-                          prefixIcon: Icon(Icons.phone_iphone_rounded),
+                          prefixIcon: const Icon(Icons.phone_iphone_rounded),
+                          suffixIcon: kIsWeb
+                              ? null
+                              : IconButton(
+                                  icon: const Icon(Icons.contacts_outlined, color: Color(0xFF1D9E75)),
+                                  tooltip: 'Select from Phone Contacts',
+                                  onPressed: _pickContact,
+                                ),
                         ),
                         keyboardType: TextInputType.phone,
                       ),

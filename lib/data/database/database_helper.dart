@@ -19,7 +19,7 @@ class DatabaseHelper {
     final path = join(dbPath, 'meditrack.db');
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -39,7 +39,8 @@ class DatabaseHelper {
         createdAt TEXT NOT NULL,
         userId TEXT,
         syncStatus INTEGER DEFAULT 0,
-        lastUpdated TEXT
+        lastUpdated TEXT,
+        profileImagePath TEXT
       )
     ''');
 
@@ -149,6 +150,13 @@ class DatabaseHelper {
           lastUpdated TEXT
         )
       ''');
+    }
+    if (oldVersion < 4) {
+      try {
+        await db.execute('ALTER TABLE user_profile ADD COLUMN profileImagePath TEXT');
+      } catch (e) {
+        // Ignore if the column already exists
+      }
     }
   }
 

@@ -139,7 +139,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                                 onPressed: () async {
                                   final messenger = ScaffoldMessenger.of(context);
                                   try {
-                                    if (await FlutterContacts.requestPermission()) {
+                                    if (await FlutterContacts.requestPermission(readonly: true)) {
                                       final contact = await FlutterContacts.openExternalPick();
                                       if (contact != null) {
                                         String name = contact.displayName;

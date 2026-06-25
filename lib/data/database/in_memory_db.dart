@@ -19,6 +19,7 @@ class InMemoryDb {
       createdAt: DateTime.now().subtract(const Duration(days: 30)).toIso8601String(),
       userId: 'margaret@meditrack.com',
       syncStatus: 1,
+      profileImagePath: null,
     ),
     UserProfileModel(
       id: 2,
@@ -32,6 +33,7 @@ class InMemoryDb {
       createdAt: DateTime.now().subtract(const Duration(days: 30)).toIso8601String(),
       userId: 'james@meditrack.com',
       syncStatus: 1,
+      profileImagePath: null,
     ),
     UserProfileModel(
       id: 3,
@@ -45,6 +47,7 @@ class InMemoryDb {
       createdAt: DateTime.now().subtract(const Duration(days: 30)).toIso8601String(),
       userId: 'evelyn@meditrack.com',
       syncStatus: 1,
+      profileImagePath: null,
     ),
   ];
 

@@ -11,6 +11,7 @@ class UserProfileModel {
   final String? userId;
   final int syncStatus;
   final String? lastUpdated;
+  final String? profileImagePath;
 
   UserProfileModel({
     this.id,
@@ -25,6 +26,7 @@ class UserProfileModel {
     this.userId,
     this.syncStatus = 0,
     this.lastUpdated,
+    this.profileImagePath,
   });
 
   Map<String, dynamic> toMap() {
@@ -41,6 +43,7 @@ class UserProfileModel {
       'userId': userId,
       'syncStatus': syncStatus,
       'lastUpdated': lastUpdated,
+      'profileImagePath': profileImagePath,
     };
   }
 
@@ -58,6 +61,7 @@ class UserProfileModel {
       userId: map['userId'] as String?,
       syncStatus: map['syncStatus'] as int? ?? 0,
       lastUpdated: map['lastUpdated'] as String?,
+      profileImagePath: map['profileImagePath'] as String?,
     );
   }
 
@@ -74,6 +78,7 @@ class UserProfileModel {
     String? userId,
     int? syncStatus,
     String? lastUpdated,
+    String? profileImagePath,
   }) {
     return UserProfileModel(
       id: id ?? this.id,
@@ -89,6 +94,7 @@ class UserProfileModel {
       userId: userId ?? this.userId,
       syncStatus: syncStatus ?? this.syncStatus,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      profileImagePath: profileImagePath ?? this.profileImagePath,
     );
   }
 }
