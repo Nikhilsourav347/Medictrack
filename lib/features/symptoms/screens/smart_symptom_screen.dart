@@ -279,7 +279,7 @@ class _SmartSymptomScreenState extends State<SmartSymptomScreen> {
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         title: const Text('Symptom Analyzer'),
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.history_rounded),
@@ -287,6 +287,14 @@ class _SmartSymptomScreenState extends State<SmartSymptomScreen> {
             onPressed: () {
               _ttsService.stop();
               context.push('/symptoms/history');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.add_rounded),
+            tooltip: 'Log Symptom',
+            onPressed: () {
+              _ttsService.stop();
+              context.push('/symptoms/add');
             },
           ),
         ],

@@ -298,7 +298,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'icon': Icons.sick_outlined,
         'color': const Color(0xFF8E24AA),
         'bgColor': const Color(0xFFF3E5F5),
-        'onTap': () => context.push('/symptom-analyzer'),
+        'onTap': () => context.push('/symptoms'),
       },
       {
         'label': 'Doctor Visits',
