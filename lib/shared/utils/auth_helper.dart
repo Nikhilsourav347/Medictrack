@@ -11,7 +11,6 @@ class AuthHelper extends ChangeNotifier {
 
   static const String _keyIsLoggedIn = 'is_logged_in';
   static const String _keyUserEmail = 'user_email';
-  static const String _keyIsAdmin = 'is_admin';
   static const String _keyOnboardingCompleted = 'onboarding_completed';
   static const String _keyAcceptedPrecautions = 'accepted_precautions';
 
@@ -20,13 +19,12 @@ class AuthHelper extends ChangeNotifier {
 
   bool _initialized = false;
   bool _isLoggedInState = false;
-  bool _isAdminState = false;
   bool _onboardingCompletedState = false;
   bool _acceptedPrecautionsState = false;
   String? _userEmailState;
 
   bool get isLoggedIn => _isLoggedInState;
-  bool get isAdmin => _isAdminState;
+  bool get isAdmin => false;
   bool get onboardingCompleted => _onboardingCompletedState;
   bool get acceptedPrecautions => _acceptedPrecautionsState;
   String? get userEmail => _userEmailState;
@@ -35,7 +33,6 @@ class AuthHelper extends ChangeNotifier {
     if (_initialized) return;
     _prefs = await SharedPreferences.getInstance();
     _isLoggedInState = _prefs?.getBool(_keyIsLoggedIn) ?? false;
-    _isAdminState = _prefs?.getBool(_keyIsAdmin) ?? false;
     _onboardingCompletedState = _prefs?.getBool(_keyOnboardingCompleted) ?? false;
     _acceptedPrecautionsState = _prefs?.getBool(_keyAcceptedPrecautions) ?? false;
     _userEmailState = _prefs?.getString(_keyUserEmail);
@@ -58,7 +55,6 @@ class AuthHelper extends ChangeNotifier {
   }
 
   Future<bool> login(String email, String name, {
-    bool isAdmin = false,
     int? age,
     String? bloodGroup,
     int syncStatus = 1,
@@ -68,24 +64,20 @@ class AuthHelper extends ChangeNotifier {
     // Save to shared preferences
     await _prefs?.setBool(_keyIsLoggedIn, true);
     await _prefs?.setString(_keyUserEmail, email);
-    await _prefs?.setBool(_keyIsAdmin, isAdmin);
     
     _isLoggedInState = true;
-    _isAdminState = isAdmin;
     _userEmailState = email;
 
-    if (!isAdmin) {
-      // Save/Upsert Profile in DB only for elders, not admin
-      final profile = UserProfileModel(
-        name: name,
-        age: age ?? 78, // default fallback
-        bloodGroup: bloodGroup ?? 'O+', // default fallback
-        createdAt: DateTime.now().toIso8601String(),
-        userId: email,
-        syncStatus: syncStatus,
-      );
-      await _profileRepo.upsertProfile(profile);
-    }
+    // Save/Upsert Profile in DB
+    final profile = UserProfileModel(
+      name: name,
+      age: age ?? 78, // default fallback
+      bloodGroup: bloodGroup ?? 'O+', // default fallback
+      createdAt: DateTime.now().toIso8601String(),
+      userId: email,
+      syncStatus: syncStatus,
+    );
+    await _profileRepo.upsertProfile(profile);
 
     notifyListeners();
     return true;
@@ -96,10 +88,8 @@ class AuthHelper extends ChangeNotifier {
     
     await _prefs?.remove(_keyIsLoggedIn);
     await _prefs?.remove(_keyUserEmail);
-    await _prefs?.remove(_keyIsAdmin);
     
     _isLoggedInState = false;
-    _isAdminState = false;
     _userEmailState = null;
     
     notifyListeners();

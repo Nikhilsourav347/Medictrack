@@ -17,7 +17,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _bloodGroupController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  bool _isAdminMode = false;
   bool _isSignUpMode = false;
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -61,21 +60,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   void _prefillDemo() {
     setState(() {
-      if (_isAdminMode) {
-        _emailController.text = 'admin@meditrack.com';
-        _passwordController.text = 'admin123';
+      if (_isSignUpMode) {
+        _nameController.text = 'Thomas Wright';
+        _emailController.text = 'thomas@meditrack.com';
+        _passwordController.text = 'password123';
+        _ageController.text = '76';
+        _bloodGroupController.text = 'B+';
       } else {
-        if (_isSignUpMode) {
-          _nameController.text = 'Thomas Wright';
-          _emailController.text = 'thomas@meditrack.com';
-          _passwordController.text = 'password123';
-          _ageController.text = '76';
-          _bloodGroupController.text = 'B+';
-        } else {
-          _emailController.text = 'margaret@meditrack.com';
-          _nameController.text = 'Margaret Chen';
-          _passwordController.text = 'password123';
-        }
+        _emailController.text = 'margaret@meditrack.com';
+        _nameController.text = 'Margaret Chen';
+        _passwordController.text = 'password123';
       }
     });
   }
@@ -90,39 +84,28 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     final email = _emailController.text.trim();
     final name = _nameController.text.trim().isEmpty ? 'Elder User' : _nameController.text.trim();
-    final password = _passwordController.text.trim();
 
     bool success = false;
-    if (_isAdminMode) {
-      if (email == 'admin@meditrack.com' && password == 'admin123') {
-        success = await AuthHelper().login(email, 'Administrator', isAdmin: true);
-      }
+    if (_isSignUpMode) {
+      final age = int.tryParse(_ageController.text.trim()) ?? 75;
+      final bloodGroup = _bloodGroupController.text.trim().isEmpty ? 'O+' : _bloodGroupController.text.trim();
+      success = await AuthHelper().login(
+        email,
+        name,
+        age: age,
+        bloodGroup: bloodGroup,
+        syncStatus: 0, 
+      );
     } else {
-      if (_isSignUpMode) {
-        final age = int.tryParse(_ageController.text.trim()) ?? 75;
-        final bloodGroup = _bloodGroupController.text.trim().isEmpty ? 'O+' : _bloodGroupController.text.trim();
-        // Since we are signing up a new user, we want syncStatus: 0 (local-only, needs syncing online!)
-        success = await AuthHelper().login(
-          email,
-          name,
-          isAdmin: false,
-          age: age,
-          bloodGroup: bloodGroup,
-          syncStatus: 0, 
-        );
-      } else {
-        success = await AuthHelper().login(email, name, isAdmin: false);
-      }
+      success = await AuthHelper().login(email, name);
     }
 
     if (mounted) {
       setState(() => _isLoading = false);
       if (!success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isAdminMode 
-                ? 'Invalid Admin Credentials (use: admin@meditrack.com / admin123)' 
-                : 'Login failed. Please check credentials.'),
+          const SnackBar(
+            content: Text('Login failed. Please check credentials.'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -232,91 +215,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                // Role Selector Tabs
-                                Container(
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: GestureDetector(
-                                          onTap: () => setState(() {
-                                            _isAdminMode = false;
-                                            _emailController.clear();
-                                            _passwordController.clear();
-                                            _nameController.clear();
-                                          }),
-                                          child: AnimatedContainer(
-                                            duration: const Duration(milliseconds: 250),
-                                            alignment: Alignment.center,
-                                            decoration: BoxDecoration(
-                                              color: !_isAdminMode ? const Color(0xFF6366F1) : Colors.transparent,
-                                              borderRadius: BorderRadius.circular(16),
-                                              boxShadow: !_isAdminMode
-                                                  ? [
-                                                      BoxShadow(
-                                                        color: const Color(0xFF6366F1).withValues(alpha: 0.3),
-                                                        blurRadius: 8,
-                                                        offset: const Offset(0, 3),
-                                                      )
-                                                    ]
-                                                  : [],
-                                            ),
-                                            child: Text(
-                                              'Elderly Mode',
-                                              style: TextStyle(
-                                                color: !_isAdminMode ? Colors.white : Colors.grey.shade600,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: GestureDetector(
-                                          onTap: () => setState(() {
-                                            _isAdminMode = true;
-                                            _emailController.clear();
-                                            _passwordController.clear();
-                                            _nameController.clear();
-                                          }),
-                                          child: AnimatedContainer(
-                                            duration: const Duration(milliseconds: 250),
-                                            alignment: Alignment.center,
-                                            decoration: BoxDecoration(
-                                              color: _isAdminMode ? const Color(0xFF1D9E75) : Colors.transparent,
-                                              borderRadius: BorderRadius.circular(16),
-                                              boxShadow: _isAdminMode
-                                                  ? [
-                                                      BoxShadow(
-                                                        color: const Color(0xFF1D9E75).withValues(alpha: 0.3),
-                                                        blurRadius: 8,
-                                                        offset: const Offset(0, 3),
-                                                      )
-                                                    ]
-                                                  : [],
-                                            ),
-                                            child: Text(
-                                              'Admin Portal',
-                                              style: TextStyle(
-                                                color: _isAdminMode ? Colors.white : Colors.grey.shade600,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
                                 Text(
-                                  _isAdminMode 
-                                      ? 'System Admin Portal' 
-                                      : (_isSignUpMode ? 'Elder Registration' : 'Patient/Elder Log'),
+                                  _isSignUpMode ? 'Elder Registration' : 'Patient/Elder Log',
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.w800,
                                     color: const Color(0xFF0F172A),
@@ -327,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 // Signup fields (only in Elderly Mode when isSignUpMode is true)
                                 AnimatedCrossFade(
                                   duration: const Duration(milliseconds: 350),
-                                  crossFadeState: (!_isAdminMode && _isSignUpMode)
+                                  crossFadeState: _isSignUpMode
                                       ? CrossFadeState.showFirst
                                       : CrossFadeState.showSecond,
                                   firstChild: Column(
@@ -342,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                             prefixIcon: Icon(Icons.person_outline_rounded),
                                           ),
                                           validator: (value) {
-                                            if (!_isAdminMode && _isSignUpMode && (value == null || value.trim().isEmpty)) {
+                                            if (_isSignUpMode && (value == null || value.trim().isEmpty)) {
                                               return 'Please enter your name';
                                             }
                                             return null;
@@ -363,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   prefixIcon: Icon(Icons.calendar_today_rounded),
                                                 ),
                                                 validator: (value) {
-                                                  if (!_isAdminMode && _isSignUpMode) {
+                                                  if (_isSignUpMode) {
                                                     if (value == null || value.trim().isEmpty) {
                                                       return 'Enter age';
                                                     }
@@ -388,7 +288,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   prefixIcon: Icon(Icons.bloodtype_outlined),
                                                 ),
                                                 validator: (value) {
-                                                  if (!_isAdminMode && _isSignUpMode && (value == null || value.trim().isEmpty)) {
+                                                  if (_isSignUpMode && (value == null || value.trim().isEmpty)) {
                                                     return 'Enter group';
                                                   }
                                                   return null;
@@ -407,16 +307,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 TextFormField(
                                   controller: _emailController,
                                   keyboardType: TextInputType.emailAddress,
-                                  decoration: InputDecoration(
-                                    labelText: _isAdminMode ? 'Admin ID' : 'Email Address',
-                                    hintText: _isAdminMode ? 'Enter admin username' : 'Enter email',
-                                    prefixIcon: const Icon(Icons.email_outlined),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Email Address',
+                                    hintText: 'Enter email',
+                                    prefixIcon: Icon(Icons.email_outlined),
                                   ),
                                   validator: (value) {
                                     if (value == null || value.trim().isEmpty) {
-                                      return _isAdminMode ? 'Please enter Admin ID' : 'Please enter your email';
+                                      return 'Please enter your email';
                                     }
-                                    if (!_isAdminMode && !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value.trim())) {
+                                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value.trim())) {
                                       return 'Please enter a valid email address';
                                     }
                                     return null;
@@ -455,9 +355,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 ElevatedButton(
                                   onPressed: _isLoading ? null : _handleLogin,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: _isAdminMode 
-                                        ? const Color(0xFF1D9E75) 
-                                        : (_isSignUpMode ? const Color(0xFF10B981) : const Color(0xFF6366F1)),
+                                    backgroundColor: _isSignUpMode ? const Color(0xFF10B981) : const Color(0xFF6366F1),
                                     padding: const EdgeInsets.symmetric(vertical: 16),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
@@ -473,38 +371,33 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                           ),
                                         )
                                       : Text(
-                                          _isAdminMode 
-                                              ? 'SECURE LOGIN' 
-                                              : (_isSignUpMode ? 'CREATE ACCOUNT' : 'SIGN IN & ACCESS'),
+                                          _isSignUpMode ? 'CREATE ACCOUNT' : 'SIGN IN & ACCESS',
                                           style: const TextStyle(fontWeight: FontWeight.bold),
                                         ),
                                 ),
 
-                                // Sign In / Sign Up Toggle Link
-                                if (!_isAdminMode) ...[
-                                  const SizedBox(height: 12),
-                                  TextButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isSignUpMode = !_isSignUpMode;
-                                        _emailController.clear();
-                                        _passwordController.clear();
-                                        _nameController.clear();
-                                        _ageController.clear();
-                                        _bloodGroupController.clear();
-                                      });
-                                    },
-                                    child: Text(
-                                      _isSignUpMode
-                                          ? 'Already have an account? Sign In'
-                                          : "Don't have an account? Register Now",
-                                      style: TextStyle(
-                                        color: _isSignUpMode ? const Color(0xFF1D9E75) : const Color(0xFF6366F1),
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                const SizedBox(height: 12),
+                                TextButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _isSignUpMode = !_isSignUpMode;
+                                      _emailController.clear();
+                                      _passwordController.clear();
+                                      _nameController.clear();
+                                      _ageController.clear();
+                                      _bloodGroupController.clear();
+                                    });
+                                  },
+                                  child: Text(
+                                    _isSignUpMode
+                                        ? 'Already have an account? Sign In'
+                                        : "Don't have an account? Register Now",
+                                    style: TextStyle(
+                                      color: _isSignUpMode ? const Color(0xFF1D9E75) : const Color(0xFF6366F1),
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                ],
+                                ),
                               ],
                             ),
                           ),
@@ -516,10 +409,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       TextButton.icon(
                         onPressed: _prefillDemo,
                         icon: const Icon(Icons.flash_on_rounded, color: Color(0xFFF59E0B)),
-                        label: Text(
-                          _isAdminMode ? 'Prefill Admin Key' : 'Prefill Elder Demo',
+                        label: const Text(
+                          'Prefill Elder Demo',
                           style: TextStyle(
-                            color: _isAdminMode ? const Color(0xFF1D9E75) : const Color(0xFF6366F1),
+                            color: Color(0xFF6366F1),
                             fontWeight: FontWeight.bold,
                           ),
                         ),

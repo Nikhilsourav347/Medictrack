@@ -14,7 +14,6 @@ import '../../features/doctor_visits/screens/add_visit_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/emergency/screens/emergency_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
-import '../../features/admin/screens/admin_dashboard.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/onboarding/screens/getting_started_screen.dart';
 import '../../features/ai_insights/screens/ai_insights_screen.dart';
@@ -37,7 +36,6 @@ class AppRouter {
       final hasCompletedOnboarding = auth.onboardingCompleted;
       final acceptedPrecautions = auth.acceptedPrecautions;
       final isLoggedIn = auth.isLoggedIn;
-      final isAdmin = auth.isAdmin;
       final isLoggingIn = state.matchedLocation == '/login';
       final isOnboarding = state.matchedLocation == '/onboarding';
       final isGettingStarted = state.matchedLocation == '/getting-started';
@@ -48,7 +46,7 @@ class AppRouter {
 
       if (isOnboarding) {
         return isLoggedIn
-            ? (isAdmin ? '/admin/dashboard' : '/')
+            ? '/'
             : (acceptedPrecautions ? '/login' : '/getting-started');
       }
 
@@ -60,12 +58,6 @@ class AppRouter {
         return (isLoggingIn || isGettingStarted) ? null : '/login';
       }
       if (isLoggedIn && isLoggingIn) {
-        return isAdmin ? '/admin/dashboard' : '/';
-      }
-      if (isAdmin && !state.matchedLocation.startsWith('/admin')) {
-        return '/admin/dashboard';
-      }
-      if (!isAdmin && state.matchedLocation.startsWith('/admin')) {
         return '/';
       }
       return null;
@@ -80,11 +72,6 @@ class AppRouter {
         path: '/getting-started',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const GettingStartedScreen(),
-      ),
-      GoRoute(
-        path: '/admin/dashboard',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const AdminDashboardScreen(),
       ),
       GoRoute(
         path: '/login',
