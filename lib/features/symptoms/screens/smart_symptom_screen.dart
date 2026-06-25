@@ -289,14 +289,6 @@ class _SmartSymptomScreenState extends State<SmartSymptomScreen> {
               context.push('/symptoms/history');
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.add_rounded),
-            tooltip: 'Log Symptom',
-            onPressed: () {
-              _ttsService.stop();
-              context.push('/symptoms/add');
-            },
-          ),
         ],
       ),
       body: SafeArea(

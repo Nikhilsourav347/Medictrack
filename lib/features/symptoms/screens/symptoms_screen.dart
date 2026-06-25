@@ -153,14 +153,6 @@ class _SymptomsScreenState extends State<SymptomsScreen> {
               context.push('/symptom-analyzer');
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.add_rounded),
-            tooltip: 'Log Symptom',
-            onPressed: () async {
-              await context.push('/symptoms/add');
-              _loadSymptoms();
-            },
-          ),
         ],
       ),
       body: _loading
