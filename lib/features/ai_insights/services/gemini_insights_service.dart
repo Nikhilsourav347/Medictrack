@@ -1,5 +1,6 @@
+import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:http/http.dart' as http;
 import '../../../data/models/user_profile_model.dart';
 import '../../../data/models/vital_model.dart';
 import '../../../data/models/medicine_model.dart';
@@ -20,6 +21,8 @@ class HealthInsights {
 }
 
 class GeminiInsightsService {
+  static const String _baseUrl = 'https://api.x.ai/v1/chat/completions';
+
   Future<HealthInsights> generateHealthInsights({
     UserProfileModel? profile,
     required List<VitalModel> recentVitals,
@@ -34,27 +37,13 @@ class GeminiInsightsService {
 
     if (apiKey.trim().isEmpty || apiKey == 'YOUR_GEMINI_API_KEY_HERE') {
       throw Exception(
-        "Gemini API key is not configured.\n\n"
+        "Grok API key is not configured.\n\n"
         "To fix this:\n"
         "1. Open the '.env' file in the root of the 'meditrack' project.\n"
-        "2. Add your actual Gemini API key:\n"
+        "2. Add your actual Grok API key:\n"
         "   GEMINI_API_KEY=your_key_here"
       );
     }
-
-    final model = GenerativeModel(
-      model: 'gemini-2.0-flash',
-      apiKey: apiKey,
-      systemInstruction: Content.system(
-        "You are an expert personal health AI analyzer. You receive a patient's medical profile (age, blood group, chronic conditions, allergies), recent vitals logs, currently active medicines, and recently logged symptoms. Analyze everything together and give a complete overall health assessment of their body condition and general well-being.\n\n"
-        "Be constructive, professional, and clear. Do not use markdown tags like bolding (**) in the output values. Structure your response exactly like this with no extra text outside these labels:\n\n"
-        "CONDITION_SUMMARY: Provide a 2 to 3 sentence overall description of their physical health condition based on logs.\n\n"
-        "SCORE_ADJUSTMENT: Explain the main positive or negative factors affecting their health score (e.g. consistent vitals, severe symptoms, blood sugar level warnings).\n\n"
-        "RECOMMENDATIONS: List 3 to 4 specific advice items they should do (diet, medicine compliance, scheduling doctor visit, exercise). Number each item. Do not use double asterisks.\n\n"
-        "VOICE_SUMMARY: Write exactly 2 sentences in plain simple language summarizing the recommendations. No medical jargon. This will be read aloud to the patient.\n\n"
-        "Never diagnose diseases. Emphasize that this is an AI advisory and they should always consult a physician."
-      ),
-    );
 
     // Build the detailed patient history prompt
     final buffer = StringBuffer();
@@ -96,10 +85,42 @@ class GeminiInsightsService {
       }
     }
 
-    final response = await model.generateContent([Content.text(buffer.toString())]);
-    final responseText = response.text ?? '';
+    final response = await http.post(
+      Uri.parse(_baseUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $apiKey',
+      },
+      body: jsonEncode({
+        'model': 'grok-beta',
+        'messages': [
+          {
+            'role': 'system',
+            'content': "You are an expert personal health AI analyzer. You receive a patient's medical profile (age, blood group, chronic conditions, allergies), recent vitals logs, currently active medicines, and recently logged symptoms. Analyze everything together and give a complete overall health assessment of their body condition and general well-being.\n\n"
+                "Be constructive, professional, and clear. Do not use markdown tags like bolding (**) in the output values. Structure your response exactly like this with no extra text outside these labels:\n\n"
+                "CONDITION_SUMMARY: Provide a 2 to 3 sentence overall description of their physical health condition based on logs.\n\n"
+                "SCORE_ADJUSTMENT: Explain the main positive or negative factors affecting their health score (e.g. consistent vitals, severe symptoms, blood sugar level warnings).\n\n"
+                "RECOMMENDATIONS: List 3 to 4 specific advice items they should do (diet, medicine compliance, scheduling doctor visit, exercise). Number each item. Do not use double asterisks.\n\n"
+                "VOICE_SUMMARY: Write exactly 2 sentences in plain simple language summarizing the recommendations. No medical jargon. This will be read aloud to the patient.\n\n"
+                "Never diagnose diseases. Emphasize that this is an AI advisory and they should always consult a physician."
+          },
+          {
+            'role': 'user',
+            'content': buffer.toString()
+          }
+        ],
+        'temperature': 0.3,
+        'max_tokens': 500,
+      }),
+    );
 
-    return parseResponse(responseText);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final responseText = data['choices'][0]['message']['content'] as String;
+      return parseResponse(responseText);
+    } else {
+      throw Exception('API error ${response.statusCode}: ${response.body}');
+    }
   }
 
   static HealthInsights parseResponse(String text) {

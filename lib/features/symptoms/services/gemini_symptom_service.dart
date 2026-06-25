@@ -38,8 +38,7 @@ class SymptomAnalysis {
 }
 
 class GeminiSymptomService {
-  static const String _baseUrl = 
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+  static const String _baseUrl = 'https://api.x.ai/v1/chat/completions';
   
   // Cache to avoid duplicate calls
   static String? _lastInputHash;
@@ -60,10 +59,10 @@ class GeminiSymptomService {
 
     if (apiKey.trim().isEmpty || apiKey == 'YOUR_GEMINI_API_KEY_HERE') {
       throw Exception(
-        "Gemini API key is not configured.\n\n"
+        "Grok API key is not configured.\n\n"
         "To fix this:\n"
         "1. Open the '.env' file in the root of the 'meditrack' project.\n"
-        "2. Add your actual Gemini API key:\n"
+        "2. Add your actual Grok API key:\n"
         "   GEMINI_API_KEY=your_key_here"
       );
     }
@@ -76,26 +75,66 @@ class GeminiSymptomService {
       return _lastResult!;
     }
     
-    // Build all parts in one shot
-    final parts = _buildParts(
-      patientContext, voiceDescription, textDescription, imageBytes
-    );
-    
-    final response = await http.post(
-      Uri.parse('$_baseUrl?key=$apiKey'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'contents': [{'parts': parts}],
-        'generationConfig': {
-          'temperature': 0.3,
-          'maxOutputTokens': 500,
+    // Build OpenAI-compatible request body
+    final dynamic userContent;
+    if (imageBytes != null) {
+      userContent = [
+        {
+          'type': 'text',
+          'text': 'PATIENT PROFILE:\n$patientContext\n\n'
+              'SYMPTOM (spoken): ${voiceDescription ?? ''}\n\n'
+              'EXTRA DETAILS: ${textDescription ?? ''}'
+        },
+        {
+          'type': 'image_url',
+          'image_url': {
+            'url': 'data:image/jpeg;base64,${base64Encode(imageBytes)}'
+          }
         }
+      ];
+    } else {
+      userContent = 'PATIENT PROFILE:\n$patientContext\n\n'
+          'SYMPTOM (spoken): ${voiceDescription ?? ''}\n\n'
+          'EXTRA DETAILS: ${textDescription ?? ''}';
+    }
+
+    final response = await http.post(
+      Uri.parse(_baseUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $apiKey',
+      },
+      body: jsonEncode({
+        'model': 'grok-beta',
+        'messages': [
+          {
+            'role': 'system',
+            'content': 'You are a medical first-aid AI assistant in a health app.\n'
+                'Analyze the patient profile, symptom description, and image (if provided).\n'
+                'Give a complete assessment in ONE response. Do not ask follow-up questions.\n'
+                'Work with whatever information is given.\n'
+                'Provide your complete assessment in one response. Do not ask the user any follow-up questions. Work with whatever information is provided.\n\n'
+                'Respond EXACTLY in this format:\n'
+                'ASSESSMENT: [2 sentences on what you observe]\n'
+                'SEVERITY: [MINOR or MODERATE or SERIOUS or EMERGENCY]\n'
+                'ADVICE: [3-5 numbered actionable steps specific to what you see]\n'
+                'MEDICINES: [Specific OTC suggestion OR reason why not safe for this patient]\n'
+                'WATCH_FOR: [2-3 signs that mean go to hospital immediately]\n'
+                'VOICE_SUMMARY: [2 sentences max, plain language, for text-to-speech]'
+          },
+          {
+            'role': 'user',
+            'content': userContent,
+          }
+        ],
+        'temperature': 0.3,
+        'max_tokens': 500,
       }),
     );
     
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      final resultText = data['candidates'][0]['content']['parts'][0]['text'] as String;
+      final resultText = data['choices'][0]['message']['content'] as String;
       
       final parsed = parseResponse(resultText);
       // Save to cache
@@ -103,63 +142,12 @@ class GeminiSymptomService {
       _lastResult = parsed;
       return parsed;
     } else {
-      throw Exception('API error ${response.statusCode}');
+      throw Exception('API error ${response.statusCode}: ${response.body}');
     }
   }
   
   String _buildHash(String ctx, String? voice, String? text, Uint8List? img) {
     return '${ctx.hashCode}_${voice?.hashCode}_${text?.hashCode}_${img?.length}';
-  }
-  
-  List<Map<String, dynamic>> _buildParts(
-    String patientContext,
-    String? voiceDescription,
-    String? textDescription,
-    Uint8List? imageBytes,
-  ) {
-    final parts = <Map<String, dynamic>>[];
-    
-    // 1. System instruction
-    parts.add({
-      'text': '''You are a medical first-aid AI assistant in a health app.
-Analyze the patient profile, symptom description, and image (if provided).
-Give a complete assessment in ONE response. Do not ask follow-up questions.
-Work with whatever information is given.
-Provide your complete assessment in one response. Do not ask the user any follow-up questions. Work with whatever information is provided.
-
-Respond EXACTLY in this format:
-ASSESSMENT: [2 sentences on what you observe]
-SEVERITY: [MINOR or MODERATE or SERIOUS or EMERGENCY]
-ADVICE: [3-5 numbered actionable steps specific to what you see]
-MEDICINES: [Specific OTC suggestion OR reason why not safe for this patient]
-WATCH_FOR: [2-3 signs that mean go to hospital immediately]
-VOICE_SUMMARY: [2 sentences max, plain language, for text-to-speech]'''
-    });
-    
-    // 2. Patient context
-    parts.add({'text': 'PATIENT PROFILE:\n$patientContext'});
-    
-    // 3. Voice description if available
-    if (voiceDescription != null && voiceDescription.isNotEmpty) {
-      parts.add({'text': 'SYMPTOM (spoken): $voiceDescription'});
-    }
-    
-    // 4. Text description if available
-    if (textDescription != null && textDescription.isNotEmpty) {
-      parts.add({'text': 'EXTRA DETAILS: $textDescription'});
-    }
-    
-    // 5. Image if available - base64 encoded
-    if (imageBytes != null) {
-      parts.add({
-        'inlineData': {
-          'mimeType': 'image/jpeg',
-          'data': base64Encode(imageBytes),
-        }
-      });
-    }
-    
-    return parts;
   }
 
   static SymptomAnalysis parseResponse(String text) {
